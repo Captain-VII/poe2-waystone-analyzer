@@ -21,8 +21,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: "The Juice Score",
     bullets: [
-      "It's built around your waystone's **single strongest stat**, not an average of all of them. Each stat is compared against its own realistic ceiling first (they roll on very different scales), then tiered: Weak, OK, Top, or Legendary.",
+      "It's your **best-fitting real league mechanic's fit** (Breach, Ritual, Delirium, Expedition, Abyss, or Temple) — not a separate map-only number. Each mechanic reads the waystone's own priority stat for it, compared against a realistic ceiling, then tiered: Weak, OK, Top, or Legendary.",
       "Every other stat that's at least \"OK\" adds a small bonus on top — so one genuinely great roll carries the score, instead of being diluted by four mediocre lines.",
+      "**Overseer and Irradiated don't count toward it.** They're not a real league-encounter mechanic — their own tablet fit still shows (in the \"Other\" box below the main list), but only Breach/Ritual/Delirium/Expedition/Abyss/Temple can drive the Juice Score or the Atlas Master pick.",
     ],
   },
   {
