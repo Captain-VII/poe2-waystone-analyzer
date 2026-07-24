@@ -1,5 +1,5 @@
 import type { AnalysisResult, TierClass } from "../types";
-import type { EffectiveMode, SessionStatsView, SessionHistoryEntry } from "../settings";
+import type { EffectiveMode, SessionStatsView, SessionHistoryEntry, AnalysisLogEntry } from "../settings";
 import type { MechanicEdit, MetaEditorModel } from "../analyzer/meta-schema";
 import { loadReduceEffects, saveReduceEffects } from "../settings";
 import { renderDangerList, bindDangerListToggle } from "./DangerList";
@@ -65,6 +65,11 @@ export interface OverlayOptions {
    *  show brief feedback. Undefined in plain-browser dev (no clipboard
    *  plugin), same convention as onSetHotkey/onSetAutostart above. */
   onExportHistory?(): Promise<boolean>;
+  /** Header's copy-summary button. main.ts writes the given text to the
+   *  clipboard and reports success/failure so the button can show brief
+   *  feedback. Undefined in plain-browser dev, same convention as
+   *  onExportHistory above. */
+  onCopySummary?(text: string): Promise<boolean>;
   /** Settings' Meta editor (meta.json). main.ts owns all IO: every action
    *  re-reads the file, writes a diff-only rebuild, hot-reloads the
    *  analyzer tables, and returns a fresh model to render. A rejected
@@ -119,6 +124,9 @@ export interface OverlayHandle {
    *  Export button in Settings. Called at startup with persisted history
    *  and after every Reset. */
   setSessionHistory(history: SessionHistoryEntry[]): void;
+  /** Settings' Session section — the current session's own recent analyses
+   *  (distinct from setSessionHistory's archived-past-sessions list). */
+  setAnalysisLog(log: AnalysisLogEntry[]): void;
   /** Panel element, for click-through rect reporting. */
   panelEl: HTMLElement;
   /** Currently-visible interactive controls (§2: toggle / footer / mod-scroll
@@ -233,6 +241,7 @@ export function mountOverlay(
           <span class="mini-warn" data-mini-warn title="" hidden>⚠</span>
           <button class="badge" data-badge></button>
           <button class="guide-btn" data-guide-show type="button" title="Guide" aria-label="Open guide">?</button>
+          <button class="copy-btn" data-copy type="button" title="Copy summary" aria-label="Copy waystone summary">📋</button>
           <button class="settings-btn" data-settings title="Settings" aria-label="Toggle settings panel">⚙</button>
           <button class="minimize-btn" data-minimize title="Minimize to tray (Esc)" aria-label="Minimize overlay to tray">–</button>
         </div>
@@ -329,6 +338,7 @@ export function mountOverlay(
                 <span class="set-lab">Best find</span>
                 <span class="set-val set-stat-best" data-stat-best>—</span>
               </div>
+              <div class="set-log" data-stat-log></div>
               <div class="set-row" title="Resets session stats to zero to start a fresh farming session (archives it into History first)">
                 <span class="set-lab">Stats</span>
                 <button class="set-btn" data-stat-reset type="button">Reset</button>
@@ -414,6 +424,7 @@ export function mountOverlay(
   const miniScore = q("[data-mini-score]");
   const miniWarn = q("[data-mini-warn]");
   const scoreFull = q("[data-score-full]");
+  const copyBtn = q("[data-copy]") as HTMLButtonElement;
   const statusChip = q("[data-status]");
   const footBtn = q("[data-foot]");
   const colTablets = q("[data-col-tablets]");
@@ -451,6 +462,7 @@ export function mountOverlay(
   const statBestEl = q("[data-stat-best]");
   const statResetBtn = q("[data-stat-reset]");
   const statHistoryEl = q("[data-stat-history]");
+  const statLogEl = q("[data-stat-log]");
   const statExportBtn = q("[data-stat-export]") as HTMLButtonElement;
   const metaSection = q("[data-meta-section]");
   const metaMechSel = q("[data-meta-mech]") as HTMLButtonElement;
@@ -469,6 +481,19 @@ export function mountOverlay(
   let current = initial;
   let effective: EffectiveMode = "full";
   let settingsOpen = false;
+
+  /** Header's copy-summary button — one line, ready to paste into a party
+   *  chat/Discord. "Best" mirrors what's actually on top of the Recommended
+   *  Tablets list (a real league-encounter mechanic, same exclusion as the
+   *  Juice Score itself — see adapter.ts's NON_ENCOUNTER_MECHANICS), not
+   *  just the highest raw fit, so this never names Overseer/Irradiated as
+   *  the "best" pick when the player can see it isn't. */
+  function buildSummaryText(): string {
+    const { heat, waystone } = current;
+    const best = current.tablets.find((t) => !NON_ENCOUNTER_MECHANICS.has(t.mechanic));
+    const bestPart = best ? ` — Best: ${best.mechanic} ${best.fit}%` : "";
+    return `T${waystone.tier} · ${waystone.name} — ${heat.score.toFixed(1)} ${heat.tierLabel} (${heat.verdict})${bestPart}`;
+  }
 
   function setResult(result: AnalysisResult): void {
     hideStatusChip(); // a success instantly clears a lingering failure chip
@@ -1277,6 +1302,26 @@ export function mountOverlay(
     }
   }
 
+  const LOG_ROWS_SHOWN = 5;
+
+  function setAnalysisLog(log: AnalysisLogEntry[]): void {
+    statLogEl.innerHTML = "";
+    const recent = log.slice(-LOG_ROWS_SHOWN).reverse();
+    for (const e of recent) {
+      const row = document.createElement("div");
+      row.className = "set-history-row";
+      const time = document.createElement("span");
+      time.className = "set-history-date";
+      time.textContent = new Date(e.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      const summary = document.createElement("span");
+      summary.className = "set-history-summary";
+      summary.textContent = `${e.name} — ${e.score.toFixed(1)} ${e.tierLabel}`;
+      summary.title = summary.textContent;
+      row.append(time, summary);
+      statLogEl.appendChild(row);
+    }
+  }
+
   function showHotkeyMsg(text: string, isError: boolean): void {
     hotkeyMsg.textContent = text;
     hotkeyMsg.classList.toggle("err", isError);
@@ -1397,6 +1442,15 @@ export function mountOverlay(
   changelogCloseBtn.addEventListener("click", toggleChangelog);
   guideShowBtn.addEventListener("click", toggleGuide); // toggleGuide closes Settings/Changelog itself
   guideCloseBtn.addEventListener("click", toggleGuide);
+  let copyFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+  copyBtn.addEventListener("click", () => {
+    void (async () => {
+      const ok = (await opts.onCopySummary?.(buildSummaryText())) ?? false;
+      clearTimeout(copyFeedbackTimer);
+      copyBtn.textContent = ok ? "✓" : "✗";
+      copyFeedbackTimer = setTimeout(() => (copyBtn.textContent = "📋"), 1200);
+    })();
+  });
   if (opts.onCheckUpdate && opts.onInstallUpdate) {
     const { onCheckUpdate, onInstallUpdate } = opts;
     updateBtn.addEventListener("click", () => {
@@ -1514,6 +1568,7 @@ export function mountOverlay(
     showChangelog,
     setSessionStats,
     setSessionHistory,
+    setAnalysisLog,
     panelEl: panel,
     interactiveEls,
   };

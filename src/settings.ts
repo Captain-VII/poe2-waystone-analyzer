@@ -11,6 +11,7 @@ const KEYS = {
   customPosition: "overlay.customPosition",
   sessionStats: "overlay.sessionStats",
   sessionHistory: "overlay.sessionHistory",
+  analysisLog: "overlay.analysisLog",
 } as const;
 
 export function loadReduceEffects(): boolean {
@@ -198,4 +199,59 @@ export function exportSessionHistoryCsv(history: SessionHistoryEntry[]): string 
     (e) => `${csvField(new Date(e.endedAt).toLocaleString())},${e.count},${e.avg.toFixed(1)},${csvField(e.best.name)},${e.best.score}`,
   );
   return [header, ...rows].join("\r\n");
+}
+
+/** One individual analysis, newest-last — unlike `SessionStats` (deduped,
+ *  one latest score per waystone NAME) this is a plain append-only log of
+ *  every analyze(), so re-analyzing the same map shows up twice if you did
+ *  it twice. Purely a display convenience (Settings' Session section) —
+ *  cleared on Reset like the live stats it sits next to, never archived. */
+export interface AnalysisLogEntry {
+  at: string; // ISO timestamp
+  name: string;
+  score: number;
+  tierLabel: string;
+}
+
+const MAX_LOG_ENTRIES = 10;
+
+export function loadAnalysisLog(): AnalysisLogEntry[] {
+  const raw = localStorage.getItem(KEYS.analysisLog);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((e): e is AnalysisLogEntry => {
+      const entry = e as Partial<AnalysisLogEntry> | null;
+      return (
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof entry.at === "string" &&
+        typeof entry.name === "string" &&
+        typeof entry.score === "number" &&
+        typeof entry.tierLabel === "string"
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+function saveAnalysisLog(log: AnalysisLogEntry[]): void {
+  try {
+    localStorage.setItem(KEYS.analysisLog, JSON.stringify(log.slice(-MAX_LOG_ENTRIES)));
+  } catch {
+    // Same convenience-only policy as session stats/history.
+  }
+}
+
+/** Appends one entry and persists, returning the updated (capped) log. */
+export function recordAnalysisLog(log: AnalysisLogEntry[], entry: AnalysisLogEntry): AnalysisLogEntry[] {
+  const updated = [...log, entry].slice(-MAX_LOG_ENTRIES);
+  saveAnalysisLog(updated);
+  return updated;
+}
+
+export function clearAnalysisLog(): void {
+  localStorage.removeItem(KEYS.analysisLog);
 }

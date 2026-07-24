@@ -531,9 +531,11 @@
   max-width: 170px;
 }
 
-/* Archived-session history rows (Settings → Session) — empty when no
-   session has been archived yet, so it takes no space by default. */
-.set-history {
+/* Archived-session history rows AND the current session's own recent-
+   analyses log (Settings → Session) share this row shape — both empty by
+   default, taking no space until there's something to show. */
+.set-history,
+.set-log {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -794,7 +796,8 @@
 
 .settings-btn,
 .minimize-btn,
-.guide-btn {
+.guide-btn,
+.copy-btn {
   flex: none;
   width: 26px;
   height: 26px;
@@ -811,9 +814,13 @@
   transition: background-color 120ms ease-out, color 120ms ease-out,
     border-color 120ms ease-out, transform 120ms ease-out;
 }
+/* The emoji glyph renders a touch large next to the plain-text ?/⚙/– glyphs
+   on its siblings — sized down so it doesn't dominate the header row. */
+.copy-btn { font-size: 11px; }
 .settings-btn:hover,
 .minimize-btn:hover,
-.guide-btn:hover {
+.guide-btn:hover,
+.copy-btn:hover {
   color: var(--gold-hi);
   border-color: var(--gold-hi);
   background: rgba(240, 184, 74, 0.08);
@@ -832,19 +839,22 @@
 }
 .settings-btn:active,
 .minimize-btn:active,
-.guide-btn:active { transform: scale(0.97); }
+.guide-btn:active,
+.copy-btn:active { transform: scale(0.97); }
 .settings-btn:focus-visible,
 .minimize-btn:focus-visible,
-.guide-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.guide-btn:focus-visible,
+.copy-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .settings-btn.active {
   color: var(--gold-hi);
   border-color: var(--gold-hi);
   background: rgba(240, 184, 74, 0.12);
 }
-/* Mini fallback (240×84, §2) has no room for a settings/minimize/guide affordance. */
+/* Mini fallback (240×84, §2) has no room for a settings/minimize/guide/copy affordance. */
 .mode-mini .settings-btn,
 .mode-mini .minimize-btn,
-.mode-mini .guide-btn { display: none; }
+.mode-mini .guide-btn,
+.mode-mini .copy-btn { display: none; }
 
 /* ---- tier states (§6) ---- */
 .tier-trash { --tier: #8a5a4a; --tier-glow: transparent; }

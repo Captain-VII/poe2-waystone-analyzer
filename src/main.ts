@@ -20,6 +20,9 @@ import {
   loadSessionHistory,
   archiveSession,
   exportSessionHistoryCsv,
+  loadAnalysisLog,
+  recordAnalysisLog,
+  clearAnalysisLog,
 } from "./settings";
 import { registerHotkeys, getHotkeyBase, setHotkeyBase } from "./hotkeys";
 import { getAutostartEnabled, setAutostartEnabled } from "./autostart";
@@ -30,6 +33,7 @@ import { analyzeWaystoneText } from "./analyzer/adapter";
 import { loadMetaConfig, readRawMetaFile, saveMetaFile, resetMetaFile } from "./analyzer/meta-config";
 import { buildEditorModel, buildMetaFile, type MechanicEdit, type MetaEditorModel } from "./analyzer/meta-schema";
 import { notifyLegendaryWaystone, notifyUpdateAvailable } from "./notify";
+import { playJuicyChime } from "./sound";
 import { checkForUpdate, installUpdate } from "./updater";
 import { shouldShowChangelog, markChangelogSeen } from "./changelog";
 import type { AnalysisResult, TierClass } from "./types";
@@ -43,11 +47,22 @@ let lastNotifiedName: string | null = null; // avoid re-notifying on repeat/no-o
 const sessionStats = loadSessionStats();
 // Past sessions, archived on each Reset — see settings.ts's archiveSession.
 let sessionHistory = loadSessionHistory();
+// Current session's own recent analyses (Settings → Session) — an
+// append-only log, unlike sessionStats' dedup-by-name map; cleared on
+// Reset alongside the live stats it sits next to, never archived.
+let analysisLog = loadAnalysisLog();
 
 function recordSessionStat(result: AnalysisResult): void {
   sessionStats.scores[result.waystone.name] = result.heat.score;
   saveSessionStats(sessionStats);
   overlay.setSessionStats(summarizeSessionStats(sessionStats));
+  analysisLog = recordAnalysisLog(analysisLog, {
+    at: new Date().toISOString(),
+    name: result.waystone.name,
+    score: result.heat.score,
+    tierLabel: result.heat.tierLabel,
+  });
+  overlay.setAnalysisLog(analysisLog);
 }
 
 /** Settings' session-stats "Reset" button — archives the current session
@@ -56,8 +71,11 @@ function resetSessionStats(): void {
   sessionHistory = archiveSession(sessionStats);
   sessionStats.scores = {};
   clearSessionStats();
+  analysisLog = [];
+  clearAnalysisLog();
   overlay.setSessionStats(summarizeSessionStats(sessionStats));
   overlay.setSessionHistory(sessionHistory);
+  overlay.setAnalysisLog(analysisLog);
 }
 
 /** Settings' "Export CSV" button — copies the full archived history to the
@@ -68,6 +86,20 @@ async function exportSessionHistory(): Promise<boolean> {
   try {
     const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
     await writeText(exportSessionHistoryCsv(sessionHistory));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Header's copy-summary button — writes RelicPanel's one-line summary
+ *  (score/tier/verdict/best mechanic) to the clipboard, same Tauri-only
+ *  pattern as exportSessionHistory above. */
+async function copySummary(text: string): Promise<boolean> {
+  if (!("__TAURI_INTERNALS__" in window)) return false;
+  try {
+    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+    await writeText(text);
     return true;
   } catch {
     return false;
@@ -118,6 +150,7 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
   onResetPosition: resetPosition,
   onResetStats: resetSessionStats,
   onExportHistory: exportSessionHistory,
+  onCopySummary: copySummary,
   metaEditor: "__TAURI_INTERNALS__" in window ? metaEditor : undefined,
   // Dev-only: clicking the tier badge cycles the mock fixtures, for UI
   // testing without a real clipboard waystone. Disabled in production
@@ -180,6 +213,7 @@ async function analyze(simulateCopy = true): Promise<void> {
       if (result.heat.tierClass === "god" && result.waystone.name !== lastNotifiedName) {
         lastNotifiedName = result.waystone.name;
         void notifyLegendaryWaystone(result.waystone.name, result.heat.score);
+        playJuicyChime();
       }
       recordSessionStat(result);
     }
@@ -295,6 +329,7 @@ async function init(): Promise<void> {
   if (autostartOn) setAutostartEnabled(true).catch(() => {});
   overlay.setSessionStats(summarizeSessionStats(sessionStats)); // persisted stats from previous launches
   overlay.setSessionHistory(sessionHistory); // persisted history from previous launches
+  overlay.setAnalysisLog(analysisLog); // persisted current-session log from previous launches
   await prepareWindowDrag(); // caches the window ref so the header's mousedown can start a drag synchronously
   await watchDisplayChanges(() => void handleDisplayChange());
   // Persists a user drag once it settles, then re-reports interactive
