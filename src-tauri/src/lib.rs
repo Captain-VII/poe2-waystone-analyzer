@@ -119,6 +119,7 @@ fn show_window(window: tauri::WebviewWindow) -> Result<(), String> {
     println!("[overlay] show_window invoked by frontend (post-paint signal)");
     window.show().map_err(|e| e.to_string())?;
     startup_nudge_burst(&window);
+    schedule_startup_render_check(&window);
     Ok(())
 }
 
@@ -141,6 +142,228 @@ fn startup_nudge_burst(window: &tauri::WebviewWindow) {
         }
     });
 }
+
+/// Real OS-level screen capture of the window's own screen rect, checking
+/// whether it came back suspiciously solid-black — the one thing every
+/// diagnostic pass on the render-paint bug (docs/implementation-plan.md M1)
+/// couldn't do: every trial's own DOM/CSSOM report (`diagnostics.ts`) read
+/// identical whether the window was actually visible or black, because the
+/// page's own layout engine has no way to observe what the *compositor*
+/// ends up presenting — a CDP/browser-level screenshot has the exact same
+/// blind spot (KNOWN_ISSUES #1's 2026-07-11 trial note). The only view that
+/// can see this bug is a real desktop-level capture, the same one a human
+/// eye or an actual screenshot tool would see.
+///
+/// `GetDC(None)` grabs the whole-screen device context (not the window's
+/// own DC) so this reads exactly what DWM actually composited onto the
+/// monitor at the window's rect — deliberately not `PrintWindow`, which
+/// targets a single window's own surface and would need the
+/// `PW_RENDERFULLCONTENT` flag to have any chance of seeing
+/// DirectComposition content, an extra layer of uncertainty this avoids by
+/// reading the desktop directly.
+///
+/// Downsamples to a coarse grid (every 8th pixel on each axis) rather than
+/// every pixel — this runs on a background thread a second or so after
+/// every show, so it must stay cheap, and "is this window overwhelmingly
+/// one dark color" doesn't need full resolution to detect. Returns `Some(true)`
+/// when at least 97% of the sampled pixels are near-black — high enough
+/// that the panel's own gold/ivory text and borders (a small minority of
+/// any frame) can't trip it, but low enough to catch the actual symptom
+/// (solid black rectangle) rather than requiring literal 100% purity.
+/// Returns `None` on any capture failure (never treated as "is blank" —
+/// this is a diagnostic, not a control path, so a failure to observe must
+/// never be confused with a bad observation).
+/// Pure decision extracted out of the unsafe GDI capture below so it's
+/// actually unit-testable (a synthetic buffer in, a verdict out) — the rest
+/// of `capture_window_is_blank` is unsafe FFI plumbing with no meaningful
+/// branches of its own to test. `buf` is a top-down 32bpp BGRA buffer
+/// (GDI's own byte order), `width`/`height` in pixels. Downsamples to every
+/// 8th pixel on each axis rather than reading every one — this runs on a
+/// background thread a second or so after every window show, so "is this
+/// window overwhelmingly one dark color" doesn't need full resolution.
+/// `None` when there's nothing to sample (zero-size buffer). `Some(true)`
+/// once at least 97% of sampled pixels are near-black — high enough that
+/// the panel's own gold/ivory text and borders (a small minority of any
+/// real frame) can't trip it, but low enough to catch the actual symptom
+/// (solid black rectangle) rather than requiring literal 100% purity.
+fn bgra_buffer_is_blank(buf: &[u8], width: usize, height: usize) -> Option<bool> {
+    const STEP: usize = 8;
+    const NEAR_BLACK: u8 = 12;
+    let mut sampled = 0u32;
+    let mut dark = 0u32;
+    let mut y = 0;
+    while y < height {
+        let mut x = 0;
+        while x < width {
+            let i = (y * width + x) * 4;
+            if i + 2 >= buf.len() {
+                break;
+            }
+            // BGRA byte order for a 32bpp GDI DIB.
+            let (b, g, r) = (buf[i], buf[i + 1], buf[i + 2]);
+            sampled += 1;
+            if b <= NEAR_BLACK && g <= NEAR_BLACK && r <= NEAR_BLACK {
+                dark += 1;
+            }
+            x += STEP;
+        }
+        y += STEP;
+    }
+    if sampled == 0 {
+        return None;
+    }
+    Some((dark as f64 / sampled as f64) >= 0.97)
+}
+
+#[cfg(target_os = "windows")]
+fn capture_window_is_blank(hwnd: windows_sys::Win32::Foundation::HWND) -> Option<bool> {
+    use windows_sys::Win32::Foundation::RECT;
+    use windows_sys::Win32::Graphics::Gdi::{
+        BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
+        GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
+        DIB_RGB_COLORS, SRCCOPY,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::GetWindowRect;
+
+    unsafe {
+        let mut rect: RECT = std::mem::zeroed();
+        if GetWindowRect(hwnd, &mut rect) == 0 {
+            return None;
+        }
+        let width = rect.right - rect.left;
+        let height = rect.bottom - rect.top;
+        if width <= 0 || height <= 0 {
+            return None;
+        }
+
+        let screen_dc = GetDC(std::ptr::null_mut());
+        if screen_dc.is_null() {
+            return None;
+        }
+        let mem_dc = CreateCompatibleDC(screen_dc);
+        if mem_dc.is_null() {
+            ReleaseDC(std::ptr::null_mut(), screen_dc);
+            return None;
+        }
+        let bitmap = CreateCompatibleBitmap(screen_dc, width, height);
+        if bitmap.is_null() {
+            DeleteDC(mem_dc);
+            ReleaseDC(std::ptr::null_mut(), screen_dc);
+            return None;
+        }
+        let old_obj = SelectObject(mem_dc, bitmap as _);
+
+        let blit_ok = BitBlt(
+            mem_dc,
+            0,
+            0,
+            width,
+            height,
+            screen_dc,
+            rect.left,
+            rect.top,
+            SRCCOPY,
+        );
+
+        let mut result = None;
+        if blit_ok != 0 {
+            // Top-down 32bpp DIB (negative height) — GetDIBits then gives rows
+            // in on-screen order, no manual flip needed for the sampling below.
+            let mut info: BITMAPINFO = std::mem::zeroed();
+            info.bmiHeader = BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: width,
+                biHeight: -height,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB,
+                biSizeImage: 0,
+                biXPelsPerMeter: 0,
+                biYPelsPerMeter: 0,
+                biClrUsed: 0,
+                biClrImportant: 0,
+            };
+            let mut buf = vec![0u8; (width as usize) * (height as usize) * 4];
+            let lines = GetDIBits(
+                mem_dc,
+                bitmap,
+                0,
+                height as u32,
+                buf.as_mut_ptr() as *mut _,
+                &mut info,
+                DIB_RGB_COLORS,
+            );
+            if lines > 0 {
+                result = bgra_buffer_is_blank(&buf, width as usize, height as usize);
+            }
+        }
+
+        SelectObject(mem_dc, old_obj);
+        DeleteObject(bitmap as _);
+        DeleteDC(mem_dc);
+        ReleaseDC(std::ptr::null_mut(), screen_dc);
+        result
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn capture_window_is_blank(_hwnd: ()) -> Option<bool> {
+    None
+}
+
+/// Callable on demand from the frontend (or a future in-app diagnostics
+/// button) — same capture `startup_nudge_burst` now also runs automatically
+/// after every startup show. Returns `Ok(Some(true))`/`Ok(Some(false))` for
+/// a real verdict, `Ok(None)` when the capture itself failed (never
+/// conflated with "verified fine" — see `capture_window_is_blank`'s comment).
+#[tauri::command]
+fn check_render_health(window: tauri::WebviewWindow) -> Result<Option<bool>, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0 as *mut std::ffi::c_void;
+        Ok(capture_window_is_blank(raw))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = window;
+        Ok(None)
+    }
+}
+
+/// Scheduled once, ~250ms after `startup_nudge_burst`'s last nudge (1500ms
+/// + its own settle time) — the first time this bug gets an actual
+/// pass/fail verdict instead of "the nudges fired" (proven insufficient
+/// evidence: the 2026-07-11 8-trial run showed identical Rust-side nudge
+/// logs on both visible and invisible runs). Diagnostic only for now,
+/// deliberately not wired to any new corrective action: the project's own
+/// trial log already burned one lesson on an untested escalation making
+/// things worse (trial #12, an immediate nudge racing the show itself) —
+/// this exists to gather real evidence for the next manual multi-launch
+/// session before deciding what, if anything, should react to it.
+#[cfg(target_os = "windows")]
+fn schedule_startup_render_check(window: &tauri::WebviewWindow) {
+    if !env_flag("OVERLAY_RENDER_CHECK", true) {
+        return;
+    }
+    let handle = window.clone();
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(1750));
+        let Ok(hwnd) = handle.hwnd() else {
+            println!("[overlay] render-check: could not read hwnd, skipping");
+            return;
+        };
+        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0 as *mut std::ffi::c_void;
+        match capture_window_is_blank(raw) {
+            Some(true) => println!("[overlay] render-check: window appears BLANK/BLACK (real OS capture)"),
+            Some(false) => println!("[overlay] render-check: window renders fine (real OS capture)"),
+            None => println!("[overlay] render-check: capture failed, no verdict"),
+        }
+    });
+}
+
+#[cfg(not(target_os = "windows"))]
+fn schedule_startup_render_check(_window: &tauri::WebviewWindow) {}
 
 /// Re-reveals the overlay after Escape/click-away/tray-hide — unlike
 /// `show_window` (startup-only), this nudges the surface since the black-
@@ -648,6 +871,7 @@ pub fn run() {
             log_frontend_report,
             show_window,
             reveal_window,
+            check_render_health,
             simulate_copy,
             hide_window,
             was_autostart_launch,
@@ -838,6 +1062,57 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn solid_bgra(width: usize, height: usize, b: u8, g: u8, r: u8) -> Vec<u8> {
+        let mut buf = vec![0u8; width * height * 4];
+        for px in buf.chunks_exact_mut(4) {
+            px[0] = b;
+            px[1] = g;
+            px[2] = r;
+            px[3] = 255;
+        }
+        buf
+    }
+
+    #[test]
+    fn a_solid_black_buffer_is_reported_blank() {
+        let buf = solid_bgra(64, 64, 0, 0, 0);
+        assert_eq!(bgra_buffer_is_blank(&buf, 64, 64), Some(true));
+    }
+
+    #[test]
+    fn a_solid_bright_buffer_is_not_blank() {
+        // The panel's own gold-on-dark palette is nowhere near uniform black —
+        // a solid mid-tone stands in for "the frame clearly isn't blank".
+        let buf = solid_bgra(64, 64, 74, 184, 240);
+        assert_eq!(bgra_buffer_is_blank(&buf, 64, 64), Some(false));
+    }
+
+    #[test]
+    fn a_mostly_black_frame_with_real_ui_content_is_not_blank() {
+        // Simulates a real rendered panel: overwhelmingly near-black
+        // background with a *minority* of bright pixels (text/borders) —
+        // must NOT trip the blank detector, or every real frame would
+        // false-positive as broken.
+        let mut buf = solid_bgra(64, 64, 5, 5, 5);
+        // Paint roughly 10% of the sampled grid points bright.
+        for y in (0..64).step_by(8) {
+            for x in (0..64).step_by(8) {
+                if (x / 8 + y / 8) % 3 == 0 {
+                    let i = (y * 64 + x) * 4;
+                    buf[i] = 240;
+                    buf[i + 1] = 200;
+                    buf[i + 2] = 74;
+                }
+            }
+        }
+        assert_eq!(bgra_buffer_is_blank(&buf, 64, 64), Some(false));
+    }
+
+    #[test]
+    fn an_empty_buffer_reports_no_verdict_rather_than_a_wrong_one() {
+        assert_eq!(bgra_buffer_is_blank(&[], 0, 0), None);
+    }
 
     #[test]
     fn printable_keys_are_rejected_letters_digits_numpad() {

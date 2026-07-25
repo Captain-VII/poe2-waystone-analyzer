@@ -25,8 +25,9 @@ are shipped anyway since they measurably reduce (not eliminate) how often it
 happens.
 
 **If you hit this:**
-- Try moving the mouse away from the overlay and back, or toggling
-  Compact/Full with **Shift+Ins** — this sometimes forces a fresh repaint.
+- Try moving the mouse away from the overlay and back — this sometimes
+  forces a fresh repaint. (Shift+Ins used to toggle Compact/Full for the
+  same purpose; Compact mode was removed in 0.3.9, so that key is inert now.)
 - Check Windows Update / your GPU vendor's site for a driver update.
 - Check for a [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
   update — Settings → Apps → search "WebView2".
@@ -57,6 +58,44 @@ the nudges confirmed firing every time. Shipped anyway (bisectable via
 appear to make anything worse, but **this issue is still open** — see
 `docs/implementation-plan.md`'s M1 section for the full result and a
 methodological caveat about the failure pattern.
+
+**Update (2026-07-25) — real OS-level render verification added, still no fix:**
+every prior trial's blind spot was the same one: whether the nudges
+"worked" was judged by whether the *frontend's own DOM/CSSOM diagnostics*
+looked fine — and those read byte-identical whether the window was
+actually visible or black (the bug's own signature, confirmed since
+2026-07-04). A CDP/browser screenshot has the identical blind spot, since
+it also only sees what the page believes it rendered, not what the
+compositor actually presented to the monitor.
+
+`src-tauri/src/lib.rs` now has `capture_window_is_blank` — a real
+desktop-level capture (`GetDC(None)` on the whole screen, not the window's
+own DC, then `BitBlt` at the window's actual screen rect, deliberately
+avoiding `PrintWindow`'s extra DirectComposition-support uncertainty) that
+samples a coarse pixel grid and reports whether the frame came back
+overwhelmingly solid black. `show_window` now schedules this automatically
+~1.75s after every startup show (`schedule_startup_render_check`,
+bisectable via `OVERLAY_RENDER_CHECK`, default on) and logs a real verdict
+— `window appears BLANK/BLACK` vs. `window renders fine` — instead of the
+previous "the nudges fired" non-evidence. The pixel-decision half is
+extracted into a pure `bgra_buffer_is_blank` and unit-tested against
+synthetic solid-black/solid-bright/mostly-black-with-real-content buffers
+(`src-tauri/src/lib.rs`'s test module) — the unsafe GDI plumbing around it
+isn't (and can't usefully be) unit-tested, but the branch that actually
+decides the verdict now is.
+
+**Deliberately not wired to any new corrective action.** This is
+diagnostic-only: the project already burned one lesson on an untested
+escalation making things worse (trial #12, an immediate nudge racing the
+show itself), so this pass adds *evidence*, not a new blind reaction. What
+it unblocks: the next manual multi-launch trial (the same methodology as
+trials 17-24 above) can now log an actual per-launch pass/fail instead of
+relying on a human watching the screen or a CDP screenshot that can't see
+the bug — turning future trials into real data instead of anecdote.
+**Still open** — no launches have been run against this yet; the capture
+itself was verified working (correctly reports "renders fine" against a
+real live dev session) but has not yet caught an actual black-frame
+occurrence, since the bug didn't reproduce during that session.
 
 ## 2. Tablet pool is mostly not verified against real PoE2 tablet items — and the real system doesn't match this app's model
 
