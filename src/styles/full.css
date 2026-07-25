@@ -6,7 +6,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr; /* equal width (2026-07-12, user request) */
   gap: 0 16px;
-  padding: 12px 18px 8px;
+  /* Bottom padding 8px→5px, with the missing 3px moved onto .col itself
+     (2026-07-25) — see the .col padding-bottom comment. Net vertical
+     geometry is unchanged; the 3px just moves inside the scroll container
+     so it can absorb the footer nudge. */
+  padding: 12px 18px 5px;
 }
 
 /* min-height:0 lets a grid item shrink to its track's real size instead of
@@ -16,6 +20,37 @@
    silently clipping or spilling past the card's bottom edge on the
    transparent overlay. */
 .col { min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+/* The heat column alone opts out of the scroll container above, because
+   `hidden` sliced the god-tier badge's glow in half down its right side
+   once the badge went flush-right (2026-07-25, user: "l'aura qui est
+   autour du juicy est croppé a droite"). There is 16px of empty gutter
+   between the columns for it to bleed into, and `clip` + a clip margin is
+   the only way to reach it: `overflow-x: clip` computes back to `hidden`
+   whenever the other axis is a scroll container, and per-side
+   overflow-clip-margin-* isn't implemented, so this has to drop
+   `overflow-y: auto` and take the margin on all four sides.
+   That trade is safe *here* specifically: this column's content is fixed
+   — heading, score, exactly five stat rows, total — and measures zero
+   overflow, unlike the tablets/insights columns whose lists vary with the
+   waystone. Those two keep the scrollbar safety net. On an engine without
+   overflow-clip-margin this degrades to plain `clip`, i.e. the old
+   `hidden` behaviour. */
+.body-full [data-col-heat] {
+  overflow: clip;
+  overflow-clip-margin: 22px;
+}
+/* 3px of bottom padding, taken back out of .cols so nothing shifts
+   (2026-07-25, user: "la colonne de gauche ne doit pas avoir de barre de
+   scroll, tout doit resté dans le cadre de base"). The footers are pinned
+   to the content-box bottom via margin-top:auto, so .atlas-master's 2px
+   icon nudge hangs *below* that edge — with the columns previously fitting
+   their track to the pixel, that alone was enough to trigger a scrollbar,
+   and no amount of extra column height fixes it (the pinned row just
+   follows the bottom down). A scroll container's bottom padding is part of
+   its scrollable area, so the overhang lands inside it instead. Applied to
+   all three columns, not just the tablets one, to keep their separators on
+   the same baseline. */
+.col { padding-bottom: 3px; }
 /* Thin gold scrollbar — without this, a column that overflows (on some
    DPI/font-metric combos) falls back to the default fat WebView2
    scrollbar, visually clashing with the rest of the panel. */
@@ -207,22 +242,32 @@
    via margin-top:auto so it always lines up with Total Heat across
    columns (2026-07-22, user's explicit call: consistent alignment over
    the empty space a short tablet list leaves above it). */
+/* Centered horizontally in the column instead of flush-left (2026-07-22,
+   user request: "centre les icones atlas master"). Icons sized as large
+   as the row's 25px height budget allows (padding-top trimmed to 2px,
+   matching .total-row's own — 2026-07-22, user: "grossis... le plus que
+   tu peux dans la limite des séparateurs") — this column has more
+   horizontal room and fewer items (≤5) than the Bonus row, so its icons
+   can go bigger than .ins-icon's. */
 .atlas-master {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 5px;
   margin-top: auto;
-  padding-top: 6px;
+  padding-top: 2px;
   border-top: 1px solid rgba(184, 135, 53, 0.35);
 }
 .atlas-master[hidden] { display: none; }
 .atlas-master-icon {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 1px solid var(--gold-dim);
+  position: relative;
+  top: 2px; /* nudged down slightly (2026-07-25, user: "descend un poil les icones") */
 }
 .atlas-notables {
   display: flex;
@@ -230,10 +275,12 @@
 }
 .atlas-notable-icon {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 3px;
   border: 1px solid rgba(184, 135, 53, 0.4);
+  position: relative;
+  top: 2px; /* nudged down slightly (2026-07-25, user: "descend un poil les icones") */
 }
 
 /* Rows are only clickable here (Full — see the click delegation on
@@ -320,45 +367,109 @@
    .total-row's own label+value row and .atlas-master's icon row — same
    format across all three columns' bottom rows (2026-07-22, user
    request: "fait comme les deux autres a coté avec le séparateur"). */
+/* padding-top raised (2026-07-22, user: "monte celle des bonus") so this
+   row's total height matches .total-row/.atlas-master's own 25px (was
+   shorter, so its separator sat visibly lower than the other two).
+   Re-trimmed 10px→9px (2026-07-25, user: "aligne le séparateur comme les
+   deux autres colonnes") — the row measured 26px, putting its separator
+   1px above the other two. These rows are bottom-pinned, so height is
+   what sets the separator's y: 25px total = 9px padding + 13px icons +
+   1px border + the label's 2px line-box overhang. Re-measure this if the
+   icon size or label font-size changes again — it was re-measured to 8px
+   when the icons grew to 16px (2026-07-25): 8 + 16 + 1 = 25px, the icons
+   rather than the label now being the row's tallest item. */
 .bonus-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  /* Centered like .atlas-master's icon row rather than flush-left
+     (2026-07-25, user: "centre tout comme sur la colonne de gauche"). */
+  justify-content: center;
+  gap: 5px;
   margin-top: auto;
-  padding-top: 6px;
+  padding-top: 8px;
   border-top: 1px solid rgba(184, 135, 53, 0.35);
 }
 .bonus-lab {
   flex: none;
-  font-size: 11px;
-  letter-spacing: 1.5px;
+  font-size: 12px; /* grown again (2026-07-25, user: "grossis encore") */
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--grey);
 }
+/* Never wraps (2026-07-22, user request: "faut qu'ils tiennent sur une
+   ligne pour s'aligner aux autres footers") — a wrapped second line grew
+   the row upward, breaking the pixel alignment with Total Heat/Atlas
+   Master's own single-line footers.
+   The one-line rule used to be enforced by hand-fitting the icon size to
+   the worst case (4 key factors + 3 insights = 7 icons, adapter.ts's own
+   caps), which held every icon down to what the rarest case could afford.
+   Since 2026-07-25 the icons may shrink instead (see .ins-icon's flex), so
+   they can be sized for the common 4-5 icon case and still never wrap.
+   min-width:0 is what lets this track shrink below its content. */
 .ins-icons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 2px;
 }
+/* Frame dropped (2026-07-25, user: "revois les icones pour que se soit
+   plus digeste") — a bordered, filled box around every icon turned the
+   row into a dense little grid where the boxes read louder than the
+   glyphs inside them, and capped the glyph at 10px. Bare glyphs at 13px
+   are both bigger and calmer, and the freed width pays for a real gap
+   between them. Colour alone now carries the danger/value/safe
+   distinction, backed by each icon's own silhouette (BONUS_ICON_SVG). */
+/* Grown 13px→16px (2026-07-25, user: "grossis encore"), affordable now
+   that the row is allowed to shrink its icons: flex-shrink is on (basis
+   16px, floor 11px), so the common 4-5 icon row renders at the full 16px
+   and only a rare 6-7 icon row squeezes toward the floor instead of
+   wrapping. `height` stays fixed at 16px whatever the width does — the
+   row is bottom-pinned, so a height that moved with the icon count would
+   drag this column's separator off the other two. The SVG's default
+   preserveAspectRatio letterboxes the glyph inside a squeezed box rather
+   than distorting it. */
 .ins-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
+  flex: 0 1 16px;
+  width: 16px;
+  min-width: 11px;
+  height: 16px;
   display: grid;
   place-items: center;
-  border-radius: 3px;
-  border: 1px solid rgba(184, 135, 53, 0.4);
-  background: rgba(240, 184, 74, 0.08);
   color: var(--gold-hi);
-  font-size: 10px;
   cursor: default;
 }
-.ins-icon.danger { color: var(--danger); border-color: rgba(181, 74, 58, 0.45); }
+/* Inline SVG content (2026-07-22, see RelicPanel.ts's BONUS_ICON_SVG
+   comment — the emoji/dingbat glyphs used here before didn't render
+   reliably); SVG has no intrinsic size to key off like a font glyph did. */
+.ins-icon svg { width: 100%; height: 100%; }
+.ins-icon.danger { color: var(--danger); }
 .ins-icon.value { color: var(--gold-hi); }
 .ins-icon.safe { color: var(--ivory); }
 
 /* ---- danger list (DangerList.ts): severity-grouped warnings ---- */
-.danger-list { display: flex; flex-direction: column; gap: 1px; margin-bottom: 3px; }
+/* The list owns its own overflow (2026-07-25, user: "remettre tout les
+   malus de facon lisible du plus au moin dangereux"). Every hit renders,
+   severity-ordered, and adapter.ts caps nothing — but past ~9 of them the
+   list used to grow the whole column instead: it pushed the Bonus footer
+   clean out of the card (measured at y=483 against a column ending at
+   y=344) and put a scrollbar on the column itself. Letting this box
+   shrink and scroll keeps the footer pinned and the card intact, so the
+   overflow costs a scroll inside the list rather than a broken column.
+   Only reachable on an implausibly modded waystone now that the rows are
+   tighter — 11 fit without scrolling, against 8 danger-carrying
+   modifiers on a practical 8-mod waystone. */
+.danger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 3px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(181, 74, 58, 0.45) transparent;
+}
+.danger-list::-webkit-scrollbar { width: 3px; }
+.danger-list::-webkit-scrollbar-thumb { background: rgba(181, 74, 58, 0.45); }
 /* Group headers stay lighter than .sec-h — labels inside a section, not a
    new section. Color carries the tier; size keeps them out of the way. */
 .dl-group-h {
@@ -367,16 +478,22 @@
   letter-spacing: 1.5px;
   text-transform: uppercase;
   opacity: 0.85;
-  margin: 3px 0 1px;
+  margin: 2px 0 0; /* trimmed with the rows (2026-07-25) — same reason */
 }
 .danger-list .dl-group-h:first-child { margin-top: 0; }
+/* line-height 1.5→1.3 (2026-07-25): 18px per row was spending the
+   column's scarcest resource on leading, and the row count is what
+   decides whether every malus is visible at once. 12px text at 1.3 is
+   still comfortably readable and buys back ~2.5px a row — three extra
+   malus on screen before the list has to scroll at all. */
 .dl-row {
   display: flex;
+  align-items: center;
   gap: 7px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.3;
 }
-.dl-row .dl-ic { flex: none; font-size: 10px; line-height: 1.8; }
+.dl-row .dl-ic { flex: none; font-size: 10px; line-height: 1.3; }
 .dl-group-h.dl-high, .dl-row.dl-high { color: var(--danger); }
 .dl-row.dl-high { font-weight: 600; }
 .dl-group-h.dl-medium, .dl-row.dl-medium { color: var(--gold-hi); }

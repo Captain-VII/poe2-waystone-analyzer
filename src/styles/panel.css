@@ -289,9 +289,38 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 9.5px;
+  /* Grown 9.5px→11px and pushed right (2026-07-25, user: "l'icone Juicy on
+     va l'agrandir et le décalé un peu a droite").
+     `margin-left:auto` rather than a fixed nudge: this column has only
+     ~90px free beside the 50.8px score, and at 11px the longest label
+     ("EXCELLENT", BADGE_LABEL.splus) already measures 82.9px. A fixed 6px
+     offset fit, but with 1.3px to spare — too thin to trust across a font
+     metric that renders differently in the app's WebView2 than in the
+     browser these numbers were measured in. Auto spends the leftover space
+     as margin instead of taking it from the badge, so no label can ever be
+     ellipsized, and the badge lines up with .total-row's own right-aligned
+     value directly below it. `.score-row`'s 12px gap stays the floor on
+     how close it can get to the score. All five BADGE_LABEL values were
+     checked unclipped at this size. */
+  font-size: 11px;
   letter-spacing: 0.2px;
-  padding: 3px 6px 2px;
+  margin-left: auto;
+  /* Centered as a flex box rather than inheriting .badge's text flow
+     (2026-07-25, user: "dans la bulle juicy recentre tout"): .badge's
+     asymmetric 3px/2px vertical padding and its trailing letter-spacing
+     both pulled the label off the pill's true centre. Symmetric padding
+     plus flex centring squares up the line box on both axes.
+     The text-indent is half the letter-spacing: centring counts the dead
+     letter-space trailing the last glyph as part of the text, which biases
+     the glyphs themselves left by that much, and half of it split between
+     the two sides is what actually balances (a full 0.2px just tips the
+     same gap the other way — measured). */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-indent: 0.1px;
+  padding: 3px 8px;
 }
 
 /* ---- letter rating (supplementary to tierClass/badge, §3 "Rating: S (94.2)") ---- */
@@ -815,10 +844,11 @@
   transition: background-color 120ms ease-out, color 120ms ease-out,
     border-color 120ms ease-out, transform 120ms ease-out;
 }
-/* The emoji glyph renders a touch large next to the plain-text ?/⚙/– glyphs
-   on its siblings — sized down so it doesn't dominate the header row. */
-.copy-btn,
-.pin-btn { font-size: 11px; }
+/* Inline SVG (2026-07-22, see RelicPanel.ts's COPY_ICON_SVG/PIN_ICON_SVG
+   comment — real emoji didn't render reliably here) — sized explicitly
+   since these have no font-size to key off like their ?/⚙/– siblings. */
+.copy-btn svg,
+.pin-btn svg { width: 13px; height: 13px; }
 .settings-btn:hover,
 .minimize-btn:hover,
 .guide-btn:hover,
@@ -889,6 +919,20 @@
   background: linear-gradient(rgba(255, 211, 106, 0.22), rgba(255, 211, 106, 0.08));
   color: var(--ivory);
   border-color: var(--god);
+}
+/* Full's score-row badge gets the score halo's treatment instead of the
+   header badge's harder ring (2026-07-25, user: "il faudrait que ca fasse
+   comme l'aura du score"). Same hue, but .halo's soft falloff — its stops
+   run 0.22 → 0.08 → transparent, where the badge's own glow opened at
+   0.7 and read as a hard neon edge next to it. Paired with the same
+   text-shadow .tier-god puts on .score-num, so the two auras in this
+   column match. Left the header badge (Mini-only) alone — it sits on a
+   different background and nobody asked for it to change. */
+.tier-god .score-row .badge-sm {
+  box-shadow:
+    0 0 10px rgba(255, 211, 106, 0.3),
+    0 0 22px rgba(255, 211, 106, 0.14);
+  text-shadow: 0 0 14px rgba(255, 211, 106, 0.35);
 }
 
 /* ---- shared score / fx (§6, §7) ---- */

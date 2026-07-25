@@ -5,6 +5,17 @@ utilisateur (pas de détails internes). La section la plus récente en premier.
 Ce fichier est embarqué dans l'app (panneau "Quoi de neuf" + Réglages) et
 sert de description à la release GitHub — écrire pour les joueurs.
 
+## 0.4.0
+
+- **New: pin the overlay open.** The pin button in the header keeps it visible when you click elsewhere, instead of it slipping away mid-read.
+- **New: copy a summary of the analysis** to your clipboard with the copy button — score, verdict, best tablet and warnings as plain text, ready to paste into Discord or a spreadsheet.
+- **New: a chime on a Juicy find**, on top of the OS notification — notifications are easy to miss with DND on while gaming, and this plays through your normal audio output.
+- **Insights strengths are now icons** instead of stacked text lines, with the full wording one hover away. That freed the vertical room for the danger list to show *every* warning, most dangerous first, split into high / Medium / Low.
+- The Insights list keeps its own scrollbar on an absurdly modded waystone, so a long warning list can no longer push the Bonus row out of the card.
+- Various layout polish: the tier badge sits flush right and never gets cropped, its glow no longer gets sliced by the column edge, and the Atlas Master and Bonus footers line up with Total Heat across all three columns.
+- **Fixed: the in-app Guide said the analyze hotkey was Ctrl+E** — the default is Ins (Ctrl+E works too, and both are now documented).
+- **Fixed: the Guide described an older scoring model.** It now explains the real one: your best mechanic's priority-stat tier as the base score, plus modifier count, curated-tablet and reward bonuses.
+
 ## 0.3.9
 
 - **New: in-app Guide** (the "?" button in the header) explains why each stat matters and how the Juice Score, Mechanic Match Score, and Skip/Keep/Run verdict actually work.

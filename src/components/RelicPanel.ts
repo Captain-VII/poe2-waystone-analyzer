@@ -196,6 +196,33 @@ const CORNER_PATHS = `
   <rect x="4.4" y="4.4" width="3.2" height="3.2" transform="rotate(45 6 6)" fill="currentColor"/>
   <circle cx="10" cy="10" r="1.1" fill="currentColor" opacity=".8"/>`;
 
+// Inline SVG icons (2026-07-22) — real emoji (📋/📌/💰) were found not to
+// render reliably in this app's WebView2 (blank boxes / solid color
+// swatches, real screenshot) despite showing fine in the browser tooling
+// used to develop them. `stroke/fill="currentColor"` — same pattern as
+// the header's own diamond glyph and corner ornaments above, which have
+// never had this problem, being plain vector paths rather than font glyphs.
+const COPY_ICON_SVG = `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="6" y="1.5" width="8" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="4.5" width="8" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`;
+const PIN_ICON_SVG = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c-2 0-3.5 1.5-3.5 3.5 0 1.6 1.4 3.6 2.8 5.1L8 15l0.7-4.9c1.4-1.5 2.8-3.5 2.8-5.1 0-2-1.5-3.5-3.5-3.5Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="5" r="1.3" fill="currentColor"/></svg>`;
+// One icon per *kind* of line adapter.ts actually emits (see
+// categorizeInsight) — deliberately distinguishable at a glance from each
+// other in silhouette alone (bars / target / coin / plus / triangle /
+// check), since at this size that outline is all the reader gets.
+const BONUS_ICON_SVG: Record<"stat" | "match" | "reward" | "bonus" | "danger" | "safe" | "default", string> = {
+  // "High <stat>" — an ascending bar chart, the same "this stat is big"
+  // read as the heat column's own fill bars.
+  stat: `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="9" width="3.4" height="5.5" fill="currentColor"/><rect x="6.3" y="5.5" width="3.4" height="9" fill="currentColor"/><rect x="11.1" y="2" width="3.4" height="12.5" fill="currentColor"/></svg>`,
+  // "Strong <mechanic> match" — a target/bullseye.
+  match: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2.4" fill="currentColor"/></svg>`,
+  // "<reward> rewards" — a coin.
+  reward: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.5v7M6 6.2c0-.9.9-1.6 2-1.6s2 .5 2 1.4-.8 1.2-2 1.5-2 .8-2 1.6.9 1.4 2 1.4 2-.5 2-1.3" fill="none" stroke="currentColor" stroke-width="1.1"/></svg>`,
+  // "Bonus: … (+n)" — a plus sign.
+  bonus: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  danger: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 L14.5 13.5 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="8" y1="6" x2="8" y2="9.5" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="11.5" r="0.9" fill="currentColor"/></svg>`,
+  safe: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 L6.5 12.5 L13.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  default: `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" transform="rotate(45 8 8)" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`,
+};
+
 function cornerSvg(pos: "tl" | "tr" | "br" | "bl"): string {
   return `<svg class="corner ${pos}" viewBox="0 0 24 24" aria-hidden="true">${CORNER_PATHS}</svg>`;
 }
@@ -208,16 +235,35 @@ function fmtDelta(v: number): string {
   return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1);
 }
 
-/** Categorizes an existing insight/bonus-reason string for display —
- *  no new data, just a keyword read of text already produced by
- *  adapter.ts's buildInsights. Anything that matches nothing keeps the
- *  original plain "◆" look (never drops a line for not fitting a bucket). */
+/** Categorizes an existing insight/key-factor string for display — no new
+ *  data, just a read of text already produced by adapter.ts.
+ *
+ *  Matched on the *shape* of those strings rather than loose keywords
+ *  (2026-07-25): adapter.ts emits exactly four templates — buildKeyFactors'
+ *  `High <stat>`, `Strong <mechanic> match` and `<reward> rewards`, plus
+ *  buildInsights' `Bonus: <reason> (+n)`. The old keyword regexes were
+ *  written against none of them, so all three key factors fell through to
+ *  the same generic diamond — three identical icons in a row, which is
+ *  what made the footer unreadable. Structure-matching gives each kind its
+ *  own silhouette.
+ *
+ *  The free-text passes stay as a fallback below the templates: bonus
+ *  *reasons* are free text, and mock.ts's dev fixtures don't follow the
+ *  templates at all. Anything matching nothing keeps the diamond (never
+ *  drops a line for not fitting a bucket). Returns an SVG icon string, not
+ *  a text glyph — see BONUS_ICON_SVG's comment. */
 function categorizeInsight(text: string): { icon: string; cls: string } {
   const t = text.toLowerCase();
-  if (/reflect|no leech|no regen|avoid|danger|risk/.test(t)) return { icon: "⚠", cls: "danger" };
-  if (/breach|tablet|pair|synerg|value|worth/.test(t)) return { icon: "💰", cls: "value" };
-  if (/safe|corrupt|ceiling|stable/.test(t)) return { icon: "✅", cls: "safe" };
-  return { icon: "◆", cls: "" };
+  // Danger wins over the templates — a bonus reason naming a reflect/leech
+  // hazard should read as a warning, not as a generic "+".
+  if (/reflect|no leech|no regen|avoid|danger|risk/.test(t)) return { icon: BONUS_ICON_SVG.danger, cls: "danger" };
+  if (/^high /.test(t)) return { icon: BONUS_ICON_SVG.stat, cls: "" };
+  if (/^strong .* match$/.test(t)) return { icon: BONUS_ICON_SVG.match, cls: "" };
+  if (/ rewards$/.test(t)) return { icon: BONUS_ICON_SVG.reward, cls: "value" };
+  if (/^bonus:/.test(t)) return { icon: BONUS_ICON_SVG.bonus, cls: "value" };
+  if (/safe|corrupt|ceiling|stable/.test(t)) return { icon: BONUS_ICON_SVG.safe, cls: "safe" };
+  if (/breach|tablet|pair|synerg|value|worth/.test(t)) return { icon: BONUS_ICON_SVG.reward, cls: "value" };
+  return { icon: BONUS_ICON_SVG.default, cls: "" };
 }
 
 /** Remove/reflow/re-add so the same animation can fire repeatedly. */
@@ -253,8 +299,8 @@ export function mountOverlay(
           <span class="mini-warn" data-mini-warn title="" hidden>⚠</span>
           <button class="badge" data-badge></button>
           <button class="guide-btn" data-guide-show type="button" title="Guide" aria-label="Open guide">?</button>
-          <button class="copy-btn" data-copy type="button" title="Copy summary" aria-label="Copy waystone summary">📋</button>
-          <button class="pin-btn" data-pin type="button" title="Keep open when clicking elsewhere" aria-label="Pin overlay open">📌</button>
+          <button class="copy-btn" data-copy type="button" title="Copy summary" aria-label="Copy waystone summary">${COPY_ICON_SVG}</button>
+          <button class="pin-btn" data-pin type="button" title="Keep open when clicking elsewhere" aria-label="Pin overlay open">${PIN_ICON_SVG}</button>
           <button class="settings-btn" data-settings title="Settings" aria-label="Toggle settings panel">⚙</button>
           <button class="minimize-btn" data-minimize title="Minimize to tray (Esc)" aria-label="Minimize overlay to tray">–</button>
         </div>
@@ -1492,7 +1538,7 @@ export function mountOverlay(
       const ok = (await opts.onCopySummary?.(buildSummaryText())) ?? false;
       clearTimeout(copyFeedbackTimer);
       copyBtn.textContent = ok ? "✓" : "✗";
-      copyFeedbackTimer = setTimeout(() => (copyBtn.textContent = "📋"), 1200);
+      copyFeedbackTimer = setTimeout(() => (copyBtn.innerHTML = COPY_ICON_SVG), 1200);
     })();
   });
   function applyPinned(pinned: boolean): void {
