@@ -347,6 +347,22 @@
 }
 .tmp-close:hover { color: var(--ivory); }
 
+/* `.set-select` is `flex: none` by default (panel.css) — fine in the wide
+   Settings panel it was written for, but this popup is only 200px wide
+   (openTabletPopup, RelicPanel.ts), and a long stat name like "Monster
+   Effectiveness" or "Waystone Drop Chance" doesn't fit next to the
+   "Priority stat" label at the button's natural width. `flex: none`
+   refusing to shrink meant the button's own ellipsis (already declared on
+   `.set-select`, panel.css) never got a chance to engage — the row just
+   overflowed the popup's own box by ~19px instead (found 2026-07-25, real
+   overlay use). Same fix as `.score-row .badge-sm` elsewhere in this file:
+   let it shrink and cap it to what's actually left in the row. */
+.tablet-meta-popup .set-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+}
+
 /* ---- column 3: insights ---- */
 /* insights-block/.insights both stretch to fill the column's remaining
    height below "Insights" (flex:1, same technique as col-heat's

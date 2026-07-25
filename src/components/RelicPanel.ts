@@ -105,6 +105,13 @@ export interface OverlayHandle {
   setResult(result: AnalysisResult): void;
   setMode(mode: EffectiveMode): void;
   analyze(): void;
+  /** Brief distinct flash marking "this analysis beat every prior one in
+   *  the session" — main.ts calls this alongside analyze() (never instead
+   *  of it), only when recordSessionStat's return says so. Independent of
+   *  tierClass: the session's own best can land on any tier on a rough
+   *  session, so this must read clearly on its own, not piggyback the
+   *  god-tier sparks. */
+  flashSessionBest(): void;
   /** Shows the transient status chip naming why Ins produced nothing new —
    *  the failure counterpart of analyze()'s success pulse (which must NOT
    *  play alongside it, so the two outcomes stay unambiguous). */
@@ -777,6 +784,15 @@ export function mountOverlay(
     }
   }
 
+  /** See OverlayHandle.flashSessionBest's doc comment. Rings the halo
+   *  (`.halo`, panel.css) regardless of tierClass — `.tier-god` already
+   *  owns that element's steady-state opacity, so this is a temporary
+   *  class layered on top via `retrigger`, not a replacement for it. */
+  function flashSessionBest(): void {
+    if (opts.isReduced()) return; // §10: color states stay, motion doesn't — same guard as analyze()
+    retrigger(q(".halo"), "session-best-flash");
+  }
+
   function analyze(): void {
     if (settingsOpen) toggleSettings(); // a fresh analysis should be seen, not hidden behind Settings
     if (changelogOpen) toggleChangelog(); // same — the result must not stay hidden behind the notes
@@ -991,7 +1007,15 @@ export function mountOverlay(
     let value = "";
 
     function applyLabel(): void {
-      btn.textContent = options.find((o) => o.value === value)?.label ?? "—";
+      const label = options.find((o) => o.value === value)?.label ?? "—";
+      btn.textContent = label;
+      // The wide Settings panel never truncates this text, but the narrow
+      // tablet-meta-popup (openTabletPopup) now lets this button shrink
+      // and ellipsize (2026-07-25, real overlay bug: it used to overflow
+      // the popup's own box instead) — a title makes the full stat name
+      // reachable on hover either way, same fallback convention as every
+      // other truncated/icon-only label in this panel.
+      btn.title = label;
     }
 
     function open(): void {
@@ -1664,6 +1688,7 @@ export function mountOverlay(
     setResult,
     setMode,
     analyze,
+    flashSessionBest,
     showAnalyzeError,
     setHotkeyLabel,
     setAutostartChecked,

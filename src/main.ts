@@ -55,7 +55,21 @@ let sessionHistory = loadSessionHistory();
 // Reset alongside the live stats it sits next to, never archived.
 let analysisLog = loadAnalysisLog();
 
-function recordSessionStat(result: AnalysisResult): void {
+/** Returns whether this analysis beats every prior one in the current
+ *  session — the automatic, gesture-free "is this better than what I've
+ *  seen" signal that replaced the removed Compare mode (KNOWN_ISSUES #8,
+ *  "pas pertinent": manually pinning a waystone then analyzing a second
+ *  one to compare was too much ceremony for a question this quick, and a
+ *  side-by-side of two full analyses was more detail than the question
+ *  needed — the score alone already answers it). Read against the PRE-
+ *  update best (this function's own `summarizeSessionStats` call happens
+ *  before `sessionStats.scores` is mutated below), and only true once
+ *  there's an actual prior best to beat — the very first analysis of a
+ *  session is trivially "best" but that's not a meaningful signal. */
+function recordSessionStat(result: AnalysisResult): boolean {
+  const before = summarizeSessionStats(sessionStats);
+  const isNewSessionBest = before.best !== null && result.heat.score > before.best.score;
+
   sessionStats.scores[result.waystone.name] = result.heat.score;
   saveSessionStats(sessionStats);
   overlay.setSessionStats(summarizeSessionStats(sessionStats));
@@ -66,6 +80,7 @@ function recordSessionStat(result: AnalysisResult): void {
     tierLabel: result.heat.tierLabel,
   });
   overlay.setAnalysisLog(analysisLog);
+  return isNewSessionBest;
 }
 
 /** Settings' session-stats "Reset" button — archives the current session
@@ -216,6 +231,7 @@ async function analyze(simulateCopy = true): Promise<void> {
   const clip = await readClipboardText(simulateCopy);
   let applied: { score: number; tierClass: string; name: string } | null = null;
   let failure: AnalyzeFailure | null = null;
+  let isNewSessionBest = false;
   if (!clip) {
     failure = "clipboard";
   } else {
@@ -230,7 +246,7 @@ async function analyze(simulateCopy = true): Promise<void> {
         void notifyLegendaryWaystone(result.waystone.name, result.heat.score);
         playJuicyChime();
       }
-      recordSessionStat(result);
+      isNewSessionBest = recordSessionStat(result);
     }
   }
   // Support/debugging checkpoint: confirms whether Ins actually applied a
@@ -243,6 +259,7 @@ async function analyze(simulateCopy = true): Promise<void> {
     if (simulateCopy) overlay.showAnalyzeError(failure);
   } else {
     overlay.analyze();
+    if (isNewSessionBest) overlay.flashSessionBest();
   }
   setTimeout(() => (analyzing = false), 250);
 }

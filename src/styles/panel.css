@@ -980,6 +980,29 @@
   30% { box-shadow: 0 0 22px var(--tier), 0 0 40px var(--tier-glow); }
 }
 
+/* "New session best" (RelicPanel.ts's flashSessionBest) — the automatic,
+   gesture-free replacement for the removed Compare mode (KNOWN_ISSUES #8):
+   instead of pinning a waystone and analyzing a second one to compare, this
+   fires on its own whenever an analysis beats every prior one this
+   session. Deliberately independent of --tier/--tier-glow (unlike
+   .badge.flare above) — the session's own best can land on ANY tier on a
+   rough session, so this must read as its own signal rather than
+   inheriting whatever color the current tier happens to be. A fixed warm
+   gold ring, not the panel's --tier custom property. */
+/* Blur+spread kept modest (12px/2px, not the 26px/6px first tried) — the
+   heat column's overflow-clip-margin is 22px (full.css, sized for the tier
+   badge's own glow), and the halo already sits only ~7.6px inside the
+   column's left edge at rest. A wider shadow than this would get clipped
+   on the left (real content there — the tablets column — not empty
+   gutter), reading as the ring cut off mid-glow instead of just fading
+   into the desktop past the right edge like the badge's does. */
+.halo.session-best-flash { animation: session-best-flash 0.9s ease-out; }
+@keyframes session-best-flash {
+  0% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 211, 106, 0); }
+  30% { opacity: 1; box-shadow: 0 0 12px 2px rgba(255, 211, 106, 0.55); }
+  100% { opacity: 0; box-shadow: 0 0 0 0 rgba(255, 211, 106, 0); }
+}
+
 .spark {
   position: absolute;
   left: 50%;
