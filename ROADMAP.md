@@ -11,12 +11,12 @@ quand elle existe.
 
 ## Priorités
 
-Dans l'ordre, si on ne fait que trois choses :
-
-1. **Tests E2E du chemin presse-papier → score** — c'est le seul trou de
-   couverture qui laisse passer une régression silencieuse sur les mods.
-2. **Bug écran noir** (KNOWN_ISSUES #1) — le seul défaut qui rend l'app
-   inutilisable quand il frappe.
+1. ✅ **Tests E2E du chemin presse-papier → score** — livré 2026-07-25
+   (`src/analyzer/adapter.e2e.test.ts`, 14 tests, vérifiés par mutation).
+2. ✅ **Bug écran noir** (KNOWN_ISSUES #1) — instrumenté 2026-07-25 : une
+   vraie capture d'écran OS détecte maintenant un rendu noir automatiquement
+   après chaque démarrage. **Toujours ouvert** — c'est un diagnostic, pas un
+   correctif ; aucune action corrective n'y est câblée pour l'instant.
 3. **Comparaison de waystones** — la seule vraie fonctionnalité manquante
    côté joueur, mais voir la réserve ci-dessous : elle a déjà été retirée
    une fois.
@@ -48,17 +48,18 @@ Vrac à trier.
       fixtures et comparer le HTML/les captures à une référence, pour
       attraper les décalages de mise en page (badge, alignement des
       colonnes) que les tests de formules ne voient pas.
-- [ ] Bug écran noir (KNOWN_ISSUES #1), pistes non tentées :
-      - remplacer les nudges au timer par un `requestAnimationFrame` qui
-        **détecte** si le contenu a rendu, et ne force un reflow que si
-        rien n'est peint après ~100 ms — moins brutal qu'un resize ;
+- [ ] Bug écran noir (KNOWN_ISSUES #1) — la capture OS réelle existe
+      maintenant (`capture_window_is_blank`, 2026-07-25) et journalise un
+      vrai verdict après chaque démarrage, mais **rien ne réagit encore à
+      ce verdict**. Pistes encore non tentées :
+      - câbler une action corrective quand le verdict est « noir » (nouveau
+        nudge, cycle hide/show) — avec précaution : une escalade non testée
+        a déjà aggravé les choses une fois (essai #12) ;
+      - lancer plusieurs sessions réelles pour voir si le check attrape
+        enfin une occurrence noire (pas encore le cas au 2026-07-25) ;
       - exposer un réglage de backend graphique
         (`--angle-graphics-backend=d3d11` au lieu du d3d12 par défaut)
         pour que l'utilisateur teste selon son pilote.
-      - ⚠️ L'idée « capturer un screenshot de diagnostic » se heurte à un
-        obstacle connu : **une capture CDP ne voit pas ce bug** (constaté
-        le 2026-07-11). Il faudrait une capture d'écran OS réelle, côté
-        Rust — ce qui vaut aussi pour les tests visuels ci-dessus.
 - [ ] **Canal beta opt-in** dans les Réglages, pour tester avant la
       release publique. L'infrastructure existe déjà (tags `beta`,
       [BETA_NOTES.md](BETA_NOTES.md), flux updater) — ce qui manque, c'est
@@ -131,6 +132,16 @@ Vrac à trier.
       **côté Rust avec `reqwest`**, au démarrage, jamais dans `analyze()` :
       KNOWN_ISSUES #2 a déjà rejeté la version inline pour CORS et pour le
       budget « Ins → réaction < 100 ms ».
+- [ ] **Étendre le schéma de confiance des tablettes aux mécaniques** :
+      `tablets.ts` a déjà `confidence: "high"/"medium"/"low"` et
+      `source: "wiki"/"poe2db"/"community"/"manual"` par entrée — rien
+      d'équivalent n'existe sur `MechanicDef` (mechanics.ts) pour tracer
+      d'où vient chaque `priorityStat`. Si ça se fait, réutiliser
+      exactement ce vocabulaire plutôt qu'en inventer un second à côté.
+      Permettrait un écran « Settings → Data Quality » listant ce qui est
+      sourcé vs deviné (Temple/Irradiated : 0 source, cf. l'item Atlas
+      Master ci-dessus) — à distinguer de la télémétrie ci-dessous : ceci
+      n'est que de la provenance statique, pas de la collecte runtime.
 - [ ] **Télémétrie anonyme opt-in** : distribution des scores, tablettes
       retenues, mécaniques gagnantes. Le seul moyen de valider que le
       modèle de score colle au jeu réel plutôt qu'à des guides
@@ -180,6 +191,25 @@ Vrac à trier.
   serait invisible.
 - **Vidéo d'accueil** — coût de production élevé pour un outil dont le
   mode d'emploi tient en une phrase (survoler, appuyer sur Ins).
+
+## Sources de données
+
+Déjà utilisées, par ordre de fiabilité — voir KNOWN_ISSUES #2/#3 pour
+l'historique complet de sourcing :
+
+- **poe2db.tw** et **repoe-fork** (`repoe-fork.github.io/poe2/mods.json`) —
+  data-minées directement des fichiers du jeu, la seule catégorie
+  vraiment garantissable (mods/ranges exacts).
+- **maxroll.gg**, **Fubgun** (strats Mobalytics), **poe2wiki.net**,
+  **odealo.com** — guides communautaires, croisés 2-3 sources avant usage,
+  jamais pris seuls (c'est cette discipline de recoupement, pas la
+  quantité de sources, qui a résolu la plupart des items de KNOWN_ISSUES #2).
+
+Pistes non explorées, notées pour mémoire mais pas actionnables en l'état
+(brainstorm, pas de plan concret) : Discord/Reddit communautaires, VODs de
+streamers, un forum GitHub Discussions pour crowdsourcer des retours
+utilisateur. Aucune n'a de format exploitable identifié — à ne reprendre
+que si l'une d'elles se précise en une vraie source citable.
 
 ## Notes d'implémentation
 
