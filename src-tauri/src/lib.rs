@@ -220,8 +220,8 @@ fn capture_window_is_blank(hwnd: windows_sys::Win32::Foundation::HWND) -> Option
     use windows_sys::Win32::Foundation::RECT;
     use windows_sys::Win32::Graphics::Gdi::{
         BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
-        GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
-        DIB_RGB_COLORS, SRCCOPY,
+        GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+        SRCCOPY,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
@@ -254,15 +254,7 @@ fn capture_window_is_blank(hwnd: windows_sys::Win32::Foundation::HWND) -> Option
         let old_obj = SelectObject(mem_dc, bitmap as _);
 
         let blit_ok = BitBlt(
-            mem_dc,
-            0,
-            0,
-            width,
-            height,
-            screen_dc,
-            rect.left,
-            rect.top,
-            SRCCOPY,
+            mem_dc, 0, 0, width, height, screen_dc, rect.left, rect.top, SRCCOPY,
         );
 
         let mut result = None;
@@ -321,7 +313,7 @@ fn check_render_health(window: tauri::WebviewWindow) -> Result<Option<bool>, Str
     #[cfg(target_os = "windows")]
     {
         let hwnd = window.hwnd().map_err(|e| e.to_string())?;
-        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0 as *mut std::ffi::c_void;
+        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0;
         Ok(capture_window_is_blank(raw))
     }
     #[cfg(not(target_os = "windows"))]
@@ -331,8 +323,8 @@ fn check_render_health(window: tauri::WebviewWindow) -> Result<Option<bool>, Str
     }
 }
 
-/// Scheduled once, ~250ms after `startup_nudge_burst`'s last nudge (1500ms
-/// + its own settle time) — the first time this bug gets an actual
+/// Scheduled once, ~250ms after `startup_nudge_burst`'s last nudge
+/// (1500ms, plus its own settle time) — the first time this bug gets an actual
 /// pass/fail verdict instead of "the nudges fired" (proven insufficient
 /// evidence: the 2026-07-11 8-trial run showed identical Rust-side nudge
 /// logs on both visible and invisible runs). Diagnostic only for now,
@@ -353,10 +345,14 @@ fn schedule_startup_render_check(window: &tauri::WebviewWindow) {
             println!("[overlay] render-check: could not read hwnd, skipping");
             return;
         };
-        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0 as *mut std::ffi::c_void;
+        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0;
         match capture_window_is_blank(raw) {
-            Some(true) => println!("[overlay] render-check: window appears BLANK/BLACK (real OS capture)"),
-            Some(false) => println!("[overlay] render-check: window renders fine (real OS capture)"),
+            Some(true) => {
+                println!("[overlay] render-check: window appears BLANK/BLACK (real OS capture)")
+            }
+            Some(false) => {
+                println!("[overlay] render-check: window renders fine (real OS capture)")
+            }
             None => println!("[overlay] render-check: capture failed, no verdict"),
         }
     });
