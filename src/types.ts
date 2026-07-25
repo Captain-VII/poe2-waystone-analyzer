@@ -2,6 +2,8 @@
  *  The overlay is a pure renderer of this object: it never thresholds `score`
  *  or derives tierClass/verdict itself. */
 
+import type { StatTier } from "./analyzer/mechanics";
+
 /** Internal identifiers only — juiciness levels (§6): Faible/Moyen/Bon/
  *  Excellent/Legendaire. Kept as stable CSS/state hooks; user-facing text
  *  lives in RelicPanel's BADGE_LABEL. */
@@ -69,11 +71,19 @@ export interface BreakdownEntry {
    *  back to the old `fmtDelta(value)` rendering when absent (the "bonus"
    *  row). */
   display?: string;
-  /** Reference ceiling for this row's bar width (`|value| / max`), e.g. the
-   *  stat's own cap (scoring.ts's `CAPS`) rather than a flat constant shared
-   *  across unrelated stat scales. Absent for rows without a natural cap
-   *  (the "bonus" row), which fall back to the UI's flat default. */
+  /** Reference ceiling for this row's bar width (`|value| / max`) — the
+   *  stat's own real scoring ceiling (scoring.ts's `STAT_REFERENCES`), the
+   *  same one the Juice Score itself compares against, not a flat constant
+   *  shared across unrelated stat scales. Absent for rows without a
+   *  natural cap (the "bonus" row), which fall back to the UI's flat
+   *  default. */
   max?: number;
+  /** Weak/OK/Top/Legendary read of this row alone, against the same
+   *  15/25/50-of-ceiling boundaries the Juice Score's own dominant-stat
+   *  tiering uses (mechanics.ts's `tierForPercent`) — lets the UI color a
+   *  row by how strong it is, independent of which stat ended up dominant.
+   *  Absent for the "bonus" row (not a %-based stat). */
+  tier?: StatTier;
 }
 
 /** Per-mechanic Mechanic Match Score (§7), 0-100. */

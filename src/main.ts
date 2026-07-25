@@ -23,6 +23,9 @@ import {
   loadAnalysisLog,
   recordAnalysisLog,
   clearAnalysisLog,
+  loadStartMinimized,
+  loadPinned,
+  savePinned,
 } from "./settings";
 import { registerHotkeys, getHotkeyBase, setHotkeyBase } from "./hotkeys";
 import { getAutostartEnabled, setAutostartEnabled } from "./autostart";
@@ -106,6 +109,17 @@ async function copySummary(text: string): Promise<boolean> {
   }
 }
 
+/** Header's pin toggle — persists the value and pushes it to Rust's
+ *  PinState (lib.rs's set_pinned) so the click-away-to-dismiss poll loop
+ *  can skip hiding the window. Also called once at startup with the
+ *  persisted value, since Rust's own default is false on every launch. */
+async function setPinned(pinned: boolean): Promise<void> {
+  savePinned(pinned);
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("set_pinned", { pinned }).catch(() => {});
+}
+
 // Méta editor (Settings panel): each action re-reads the raw file, rebuilds
 // the diff-only content (meta-schema.ts's buildMetaFile), writes, hot-reloads
 // the active tables, and returns a fresh model — a concurrent hand-edit of
@@ -151,6 +165,7 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
   onResetStats: resetSessionStats,
   onExportHistory: exportSessionHistory,
   onCopySummary: copySummary,
+  onSetPinned: (pinned) => void setPinned(pinned),
   metaEditor: "__TAURI_INTERNALS__" in window ? metaEditor : undefined,
   // Dev-only: clicking the tier badge cycles the mock fixtures, for UI
   // testing without a real clipboard waystone. Disabled in production
@@ -311,7 +326,20 @@ async function init(): Promise<void> {
   if (!restored) await placeTopRight();
   await applyEffectiveMode(); // §2 fallback — may render Mini if Full doesn't fit
   await sendReport("post-placement");
-  await showWhenPainted();
+  // Settings' "Start minimized" toggle: only skip the reveal when Rust
+  // confirms this launch actually came from the Windows autostart entry
+  // (lib.rs's was_autostart_launch) — a manual double-click of the exe
+  // always shows the window regardless of the toggle. Everything else
+  // (hotkeys, click-through regions, tray icon) still initializes normally
+  // below; the window just stays in its initial .visible(false) state
+  // until a real Ins press (revealOverlay) or the tray icon brings it up.
+  let stayMinimized = false;
+  if ("__TAURI_INTERNALS__" in window && loadStartMinimized()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    stayMinimized = await invoke<boolean>("was_autostart_launch").catch(() => false);
+  }
+  if (!stayMinimized) await showWhenPainted();
+  await setPinned(loadPinned()); // Rust's PinState defaults false every launch — sync the persisted value
   // Shift+base ("toggle") is still emitted by Rust (lib.rs registers all
   // three layers unconditionally) but is inert now that Compact mode is
   // gone — there's nothing left to toggle to. No-op rather than touching

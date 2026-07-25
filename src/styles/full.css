@@ -65,6 +65,25 @@
 .body-full .halo { width: 100px; height: 100px; }
 
 /* ---- column 1: heat breakdown ---- */
+/* A little breathing room between the 5 stat rows (2026-07-22, user
+   request: "ca fait tout collé") — was 0 by default (plain stacked divs). */
+[data-breakdown] {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* flex:1 (not total-row's margin-top:auto) claims the leftover space
+     between the two separators, then justify-content:center centers the
+     5 rows within it — total-row's own position/alignment-with-Atlas-
+     Master (panel.css) is untouched, only where the rows sit above it
+     changes (2026-07-22, user request: they were top-hugged with dead
+     space below, before Total Heat). */
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+  margin-top: 4px;
+  border-top: 1px solid rgba(184, 135, 53, 0.25);
+}
+
 .score-row {
   display: flex;
   flex-wrap: nowrap;
@@ -75,13 +94,17 @@
 }
 
 .brow {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   height: 21px; /* match .trow/.ins-row (21px) so the three columns keep the same row rhythm */
+  padding: 0 6px; /* breathing room now that a rounded pill sits behind the text */
   font-size: 12px;
+  overflow: hidden;
 }
 .brow .b-lab {
+  position: relative;
   flex: 1;
   min-width: 0;
   color: var(--grey);
@@ -89,6 +112,34 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Fill bar (2026-07-22, user request: "habiller" the 5 stats) — a
+   background fill sized to `--fill` (set inline per row, |value|/max from
+   the same STAT_REFERENCES ceiling the Juice Score itself compares
+   against), inside the row's own existing height/bounds so it adds zero
+   vertical space (the column has no slack to spare, see panel.css's
+   366px height comment). `::before` sits behind the label/value (z-index),
+   which get position:relative to stay on top of it. Inset top/bottom
+   (not a full-bleed rectangle) + rounded corners so it reads as a
+   distinct pill rather than a flat block (2026-07-22 polish pass). */
+.brow::before {
+  content: "";
+  position: absolute;
+  /* Asymmetric top/bottom (not 3px/3px) — the text sat slightly above the
+     pill's visual center at an even inset (font metrics, not a layout
+     bug); nudging the pill down ~1-2px lines them up (2026-07-22, user
+     report). */
+  inset: 3px 0 1px;
+  border-radius: 4px;
+  width: var(--fill, 0%);
+  background: var(--grey);
+  opacity: 0.12;
+  pointer-events: none;
+  transition: width 0.3s ease;
+}
+.brow.stat-ok::before { background: var(--ivory); }
+.brow.stat-top::before { background: var(--gold-hi); opacity: 0.16; }
+.brow.stat-legendary::before { background: var(--god); opacity: 0.2; }
 
 /* Heat Breakdown is now supporting context, not the focal point (Top
    Tablets is) — dim the values a notch so the eye isn't pulled here first.
@@ -98,6 +149,7 @@
 [data-col-heat] .brow.neg .b-val { color: var(--danger); }
 
 .brow .b-val {
+  position: relative;
   flex: none;
   width: 44px;
   text-align: right;
@@ -105,6 +157,11 @@
   font-variant-numeric: tabular-nums;
 }
 .brow.neg .b-val { color: var(--danger); }
+.brow.stat-top .b-val { color: var(--gold-hi); }
+.brow.stat-legendary .b-val {
+  color: var(--god);
+  text-shadow: 0 0 6px rgba(255, 211, 106, 0.35);
+}
 
 .total-row {
   display: flex;
@@ -244,24 +301,61 @@
 .tmp-close:hover { color: var(--ivory); }
 
 /* ---- column 3: insights ---- */
-.insights { display: flex; flex-direction: column; gap: 2px; }
-.ins-row {
+/* insights-block/.insights both stretch to fill the column's remaining
+   height below "Insights" (flex:1, same technique as col-heat's
+   [data-breakdown]) so the Bonus block below can pin to the very bottom
+   via margin-top:auto — same alignment format as Total Heat/Atlas Master
+   (2026-07-22, user request: "fait le meme format que pour le total
+   heat"). */
+.insights-block { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.insights { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 2px; }
+
+/* Bonus items as small icon badges (2026-07-22, user request: "en forme
+   d'icone comme les atlas master") — same box shape as .atlas-notable-icon
+   (panel.css), a glyph instead of an image since no curated icon asset
+   exists per bonus reason. Full text is one hover away via `title`, same
+   convention as every other icon-only affordance in this panel.
+   .bonus-row (label + icons on one line, pinned to the column's bottom
+   via margin-top:auto + the same border-top separator) mirrors
+   .total-row's own label+value row and .atlas-master's icon row — same
+   format across all three columns' bottom rows (2026-07-22, user
+   request: "fait comme les deux autres a coté avec le séparateur"). */
+.bonus-row {
   display: flex;
-  gap: 7px;
-  font-size: 12px;
-  line-height: 1.5;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid rgba(184, 135, 53, 0.35);
+}
+.bonus-lab {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   color: var(--grey);
 }
-.ins-row .i-ic { flex: none; color: var(--gold); font-size: 10px; line-height: 1.8; }
-.ins-row.danger { color: var(--danger); font-weight: 600; }
-.ins-row.danger .i-ic { color: var(--danger); }
-/* Key Factors (folded into Insights, not a separate titled section — see
-   docs/implementation-plan.md) and categorized insight rows (§4 ask):
-   same row shape, just a distinguishing icon/color per bucket. */
-.ins-row.factor { color: var(--ivory); font-weight: 600; }
-.ins-row.factor .i-ic { color: var(--gold-hi); font-weight: 700; }
-.ins-row.value .i-ic { font-size: 11px; }
-.ins-row.safe .i-ic { font-size: 11px; }
+.ins-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ins-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  border: 1px solid rgba(184, 135, 53, 0.4);
+  background: rgba(240, 184, 74, 0.08);
+  color: var(--gold-hi);
+  font-size: 10px;
+  cursor: default;
+}
+.ins-icon.danger { color: var(--danger); border-color: rgba(181, 74, 58, 0.45); }
+.ins-icon.value { color: var(--gold-hi); }
+.ins-icon.safe { color: var(--ivory); }
 
 /* ---- danger list (DangerList.ts): severity-grouped warnings ---- */
 .danger-list { display: flex; flex-direction: column; gap: 1px; margin-bottom: 3px; }
@@ -287,24 +381,10 @@
 .dl-row.dl-high { font-weight: 600; }
 .dl-group-h.dl-medium, .dl-row.dl-medium { color: var(--gold-hi); }
 .dl-group-h.dl-low, .dl-row.dl-low { color: var(--grey); }
-/* "Bonus" header (RelicPanel.ts) — separates the factor/insight rows from
-   the danger list above them, same visual weight as the Medium/Low
-   headers so the column reads as two distinct types (malus/bonus). */
+/* "Bonus" header (RelicPanel.ts) — separates the bonus row from the
+   danger list above it, same visual weight as the Medium/Low headers so
+   the column reads as two distinct types (malus/bonus). */
 .dl-group-h.dl-bonus { color: var(--gold-hi); margin-top: 6px; }
-.dl-row.dl-hidden { display: none; }
-.danger-list.dl-expanded .dl-row.dl-hidden { display: flex; }
-.dl-more {
-  align-self: flex-start;
-  margin-top: 1px;
-  padding: 0;
-  border: none;
-  background: none;
-  font: 600 10px var(--sans);
-  letter-spacing: 0.5px;
-  color: var(--grey);
-  cursor: pointer;
-}
-.dl-more:hover { color: var(--gold-hi); }
 
 /* ---- click-to-analyze footer — ported from the removed Compact mode: it
    used to be the card's only clickable analyze trigger, now spans the full

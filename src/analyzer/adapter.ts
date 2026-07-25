@@ -12,7 +12,6 @@ import {
   dangerHitsToWarnings,
   detectDangerHits,
   evaluateMap,
-  CAPS,
   DEFAULT_THRESHOLD,
   STAT_REFERENCES,
   DANGER_SEVERITY_ORDER,
@@ -23,7 +22,14 @@ import {
   type Weights,
 } from "./scoring";
 import { getScoreLabel, formatPercent } from "./displayAdapter";
-import { getActiveMechanics, scoreMechanicFitRaw, priorityStatTier, type MechanicDef, type StatTier } from "./mechanics";
+import {
+  getActiveMechanics,
+  scoreMechanicFitRaw,
+  priorityStatTier,
+  tierForPercent,
+  type MechanicDef,
+  type StatTier,
+} from "./mechanics";
 import { getActiveTablets, type TabletDef } from "./tablets";
 import { describeReward } from "./rewards";
 import { MECHANIC_MASTERS, MECHANIC_MASTER_NOTABLES } from "./atlas-masters";
@@ -171,19 +177,28 @@ const FIELD_LABELS: Record<keyof Weights, string> = {
 // UX fix (2026-07-06): each stat row shows the REAL parsed value (e.g. "+39%
 // Item Rarity") instead of a weighted point delta a player can't cross-check
 // against the item — see displayAdapter.ts's file-level comment. `max` is
-// the stat's own cap (not a flat constant), so the UI's bar width stays
-// meaningful across stats with very different natural scales.
+// the stat's own real scoring ceiling (STAT_REFERENCES, not the legacy
+// CAPS constant — 2026-07-22 fix: CAPS was a stale display-only table that
+// had drifted out of sync with the ceilings the Juice Score itself actually
+// uses, so a row's bar/tier would have disagreed with the real score),
+// so the UI's bar width/tier coloring stay meaningful and consistent with
+// the headline score.
 function buildBreakdown(
   fields: Record<keyof Weights, FieldContribution>,
   bonusTotal: number,
 ): AnalysisResult["heat"]["breakdown"] {
-  const rows: AnalysisResult["heat"]["breakdown"] = (Object.keys(fields) as (keyof Weights)[]).map((key) => ({
-    key,
-    label: FIELD_LABELS[key],
-    value: fields[key].rawValue,
-    display: formatPercent(fields[key].rawValue),
-    max: CAPS[key],
-  }));
+  const rows: AnalysisResult["heat"]["breakdown"] = (Object.keys(fields) as (keyof Weights)[]).map((key) => {
+    const value = fields[key].rawValue;
+    const max = STAT_REFERENCES[key];
+    return {
+      key,
+      label: FIELD_LABELS[key],
+      value,
+      display: formatPercent(value),
+      max,
+      tier: tierForPercent((Math.abs(value) / max) * 100),
+    };
+  });
   // The "bonus" row (extra-content detection, e.g. "ritual present") isn't a
   // %-based stat, so it keeps the old point-delta rendering (no `display`).
   if (bonusTotal > 0) rows.push({ key: "bonus", label: "Bonus", value: Math.round(bonusTotal * 10) / 10 });

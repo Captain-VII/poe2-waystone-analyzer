@@ -797,7 +797,8 @@
 .settings-btn,
 .minimize-btn,
 .guide-btn,
-.copy-btn {
+.copy-btn,
+.pin-btn {
   flex: none;
   width: 26px;
   height: 26px;
@@ -816,14 +817,24 @@
 }
 /* The emoji glyph renders a touch large next to the plain-text ?/⚙/– glyphs
    on its siblings — sized down so it doesn't dominate the header row. */
-.copy-btn { font-size: 11px; }
+.copy-btn,
+.pin-btn { font-size: 11px; }
 .settings-btn:hover,
 .minimize-btn:hover,
 .guide-btn:hover,
-.copy-btn:hover {
+.copy-btn:hover,
+.pin-btn:hover {
   color: var(--gold-hi);
   border-color: var(--gold-hi);
   background: rgba(240, 184, 74, 0.08);
+}
+/* Pinned-on state — same "active" treatment as settings-btn.active, so the
+   header visibly shows "this is currently on" at a glance, not just on
+   hover. */
+.pin-btn.active {
+  color: var(--gold-hi);
+  border-color: var(--gold-hi);
+  background: rgba(240, 184, 74, 0.12);
 }
 /* Faint red fill so minimize reads as distinct from its siblings at a
    glance (2026-07-12, user request) — same box (26x26, 3px radius) as its
@@ -840,21 +851,24 @@
 .settings-btn:active,
 .minimize-btn:active,
 .guide-btn:active,
-.copy-btn:active { transform: scale(0.97); }
+.copy-btn:active,
+.pin-btn:active { transform: scale(0.97); }
 .settings-btn:focus-visible,
 .minimize-btn:focus-visible,
 .guide-btn:focus-visible,
-.copy-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.copy-btn:focus-visible,
+.pin-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .settings-btn.active {
   color: var(--gold-hi);
   border-color: var(--gold-hi);
   background: rgba(240, 184, 74, 0.12);
 }
-/* Mini fallback (240×84, §2) has no room for a settings/minimize/guide/copy affordance. */
+/* Mini fallback (240×84, §2) has no room for a settings/minimize/guide/copy/pin affordance. */
 .mode-mini .settings-btn,
 .mode-mini .minimize-btn,
 .mode-mini .guide-btn,
-.mode-mini .copy-btn { display: none; }
+.mode-mini .copy-btn,
+.mode-mini .pin-btn { display: none; }
 
 /* ---- tier states (§6) ---- */
 .tier-trash { --tier: #8a5a4a; --tier-glow: transparent; }

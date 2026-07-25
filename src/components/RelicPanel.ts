@@ -1,8 +1,15 @@
 import type { AnalysisResult, TierClass } from "../types";
 import type { EffectiveMode, SessionStatsView, SessionHistoryEntry, AnalysisLogEntry } from "../settings";
 import type { MechanicEdit, MetaEditorModel } from "../analyzer/meta-schema";
-import { loadReduceEffects, saveReduceEffects } from "../settings";
-import { renderDangerList, bindDangerListToggle } from "./DangerList";
+import {
+  loadReduceEffects,
+  saveReduceEffects,
+  loadStartMinimized,
+  saveStartMinimized,
+  loadPinned,
+  savePinned,
+} from "../settings";
+import { renderDangerList } from "./DangerList";
 import {
   loadShowInsights,
   saveShowInsights,
@@ -70,6 +77,11 @@ export interface OverlayOptions {
    *  feedback. Undefined in plain-browser dev, same convention as
    *  onExportHistory above. */
   onCopySummary?(text: string): Promise<boolean>;
+  /** Header's pin toggle. main.ts persists the value and pushes it to
+   *  Rust's PinState (lib.rs) so the click-away-to-dismiss poll loop can
+   *  skip hiding the window. Self-guards on Tauri presence like
+   *  onCopySummary — safe to call unconditionally. */
+  onSetPinned?(pinned: boolean): void;
   /** Settings' Meta editor (meta.json). main.ts owns all IO: every action
    *  re-reads the file, writes a diff-only rebuild, hot-reloads the
    *  analyzer tables, and returns a fresh model to render. A rejected
@@ -242,6 +254,7 @@ export function mountOverlay(
           <button class="badge" data-badge></button>
           <button class="guide-btn" data-guide-show type="button" title="Guide" aria-label="Open guide">?</button>
           <button class="copy-btn" data-copy type="button" title="Copy summary" aria-label="Copy waystone summary">📋</button>
+          <button class="pin-btn" data-pin type="button" title="Keep open when clicking elsewhere" aria-label="Pin overlay open">📌</button>
           <button class="settings-btn" data-settings title="Settings" aria-label="Toggle settings panel">⚙</button>
           <button class="minimize-btn" data-minimize title="Minimize to tray (Esc)" aria-label="Minimize overlay to tray">–</button>
         </div>
@@ -321,6 +334,13 @@ export function mountOverlay(
                 <span class="set-lab">Launch with Windows</span>
                 <label class="set-switch">
                   <input type="checkbox" data-set-autostart />
+                  <span class="set-switch-track"></span>
+                </label>
+              </div>
+              <div class="set-row" title="On a Windows-startup launch, stays in the tray instead of showing the overlay right away — press your analyze hotkey or use the tray icon to bring it up. Has no effect when you launch the app yourself.">
+                <span class="set-lab">Start minimized</span>
+                <label class="set-switch">
+                  <input type="checkbox" data-set-start-minimized />
                   <span class="set-switch-track"></span>
                 </label>
               </div>
@@ -425,6 +445,7 @@ export function mountOverlay(
   const miniWarn = q("[data-mini-warn]");
   const scoreFull = q("[data-score-full]");
   const copyBtn = q("[data-copy]") as HTMLButtonElement;
+  const pinBtn = q("[data-pin]") as HTMLButtonElement;
   const statusChip = q("[data-status]");
   const footBtn = q("[data-foot]");
   const colTablets = q("[data-col-tablets]");
@@ -440,6 +461,7 @@ export function mountOverlay(
   const setInsightsInput = q("[data-set-insights]") as HTMLInputElement;
   const setReduceInput = q("[data-set-reduce]") as HTMLInputElement;
   const setAutostartInput = q("[data-set-autostart]") as HTMLInputElement;
+  const setStartMinimizedInput = q("[data-set-start-minimized]") as HTMLInputElement;
   const setOpacityInput = q("[data-set-opacity]") as HTMLInputElement;
   const setOpacityVal = q("[data-set-opacity-val]");
   const setScaleInput = q("[data-set-scale]") as HTMLInputElement;
@@ -623,8 +645,14 @@ export function mountOverlay(
     q("[data-breakdown]").innerHTML = heat.breakdown
       .map((b) => {
         const shortLabel = BREAKDOWN_SHORT_LABELS[b.key] ?? b.label;
+        // Fill bar + tier coloring (2026-07-22): |value|/max against the
+        // same STAT_REFERENCES ceiling the Juice Score itself uses, so a
+        // row's own visual weight matches how strong that stat actually is
+        // — not just its raw parsed %.
+        const fillPct = b.max ? Math.max(0, Math.min(100, (Math.abs(b.value) / b.max) * 100)) : 0;
+        const tierClass = b.tier ? ` stat-${b.tier}` : "";
         return `
-        <div class="brow">
+        <div class="brow${tierClass}" style="--fill: ${fillPct}%">
           <span class="b-lab" title="${esc(b.label)}">${esc(shortLabel)}</span>
           <span class="b-val">${b.display ?? fmtDelta(b.value)}</span>
         </div>`;
@@ -642,24 +670,38 @@ export function mountOverlay(
     // and an empty column underneath — show them all instead (found
     // 2026-07-12, real overlay screenshot: a big dead gap below "Insights"
     // on waystones with only 1-3 danger hits).
-    const factorRows = result.keyFactors.map(
-      (line) => `<div class="ins-row factor"><span class="i-ic">+</span><span>${esc(line)}</span></div>`,
-    );
-    const insightRows = result.insights.map((line) => {
-      const { icon, cls } = categorizeInsight(line);
-      return `<div class="ins-row${cls ? ` ${cls}` : ""}"><span class="i-ic">${icon}</span><span>${esc(line)}</span></div>`;
-    });
-    // Bonus rows get their own group header (matching DangerList.ts's
+    // Bonus items as small icon badges (2026-07-22, user request: "en
+    // forme d'icone comme les atlas master") instead of one stacked text
+    // line each — same box shape as .atlas-notable-icon, a glyph instead
+    // of an image (no curated icon asset exists per bonus reason, unlike
+    // the atlas notables). Full text stays one hover away via `title`,
+    // same pattern as every other icon-only affordance in this panel
+    // (tablet rows, atlas notables). Frees up real vertical room for the
+    // danger list above, which now shows every malus, uncapped.
+    const bonusIcons = [
+      ...result.keyFactors.map((line) => ({ icon: categorizeInsight(line).icon, cls: "", line })),
+      ...result.insights.map((line) => {
+        const { icon, cls } = categorizeInsight(line);
+        return { icon, cls, line };
+      }),
+    ]
+      .map(
+        ({ icon, cls, line }) =>
+          `<span class="ins-icon${cls ? ` ${cls}` : ""}" title="${esc(line)}">${icon}</span>`,
+      )
+      .join("");
+    // Bonus block gets its own group header (matching DangerList.ts's
     // Medium/Low headers) so the column reads as two distinct types —
     // malus (the danger list above) and bonus — instead of one
     // undifferentiated stream (2026-07-12, user request).
-    const bonusHeader = factorRows.length || insightRows.length ? `<div class="dl-group-h dl-bonus">Bonus</div>` : "";
-    q("[data-insights]").innerHTML = [
-      renderDangerList(result.dangerHits),
-      bonusHeader,
-      ...factorRows,
-      ...insightRows,
-    ].join("");
+    // Label + icons sit on one row (like .total-row's label+value and
+    // .atlas-master's icon row), pinned to the column's bottom — same
+    // format as the other two columns' bottom rows (2026-07-22, user
+    // request).
+    const bonusRow = bonusIcons
+      ? `<div class="bonus-row"><span class="bonus-lab">Bonus</span><div class="ins-icons">${bonusIcons}</div></div>`
+      : "";
+    q("[data-insights]").innerHTML = [renderDangerList(result.dangerHits), bonusRow].join("");
 
     // Danger badge: purely a display label over `dangerLevel` (itself
     // derived only from `warnings`, never `score`) — sits inline in the
@@ -1387,7 +1429,6 @@ export function mountOverlay(
   }
 
   footBtn.addEventListener("click", opts.onAnalyze);
-  bindDangerListToggle(q("[data-insights]"));
   if (opts.onCycleTier) {
     const onCycleTier = opts.onCycleTier;
     badge.classList.add("dev-clickable");
@@ -1406,6 +1447,9 @@ export function mountOverlay(
     // opts.isReduced() reads the setting live (and ORs the OS media query),
     // so re-syncing the class is all it takes to apply immediately.
     syncReducedClass();
+  });
+  setStartMinimizedInput.addEventListener("change", () => {
+    saveStartMinimized(setStartMinimizedInput.checked);
   });
   if (opts.onSetAutostart) {
     const onSetAutostart = opts.onSetAutostart;
@@ -1450,6 +1494,18 @@ export function mountOverlay(
       copyBtn.textContent = ok ? "✓" : "✗";
       copyFeedbackTimer = setTimeout(() => (copyBtn.textContent = "📋"), 1200);
     })();
+  });
+  function applyPinned(pinned: boolean): void {
+    pinBtn.classList.toggle("active", pinned);
+    pinBtn.title = pinned
+      ? "Pinned — stays open when clicking elsewhere (click to unpin)"
+      : "Keep open when clicking elsewhere";
+  }
+  pinBtn.addEventListener("click", () => {
+    const pinned = !pinBtn.classList.contains("active");
+    applyPinned(pinned);
+    savePinned(pinned);
+    opts.onSetPinned?.(pinned);
   });
   if (opts.onCheckUpdate && opts.onInstallUpdate) {
     const { onCheckUpdate, onInstallUpdate } = opts;
@@ -1550,6 +1606,8 @@ export function mountOverlay(
   // that's deliberately the setting alone, not opts.isReduced(), which also
   // ORs the OS prefers-reduced-motion query the user can't toggle here.
   setReduceInput.checked = loadReduceEffects();
+  setStartMinimizedInput.checked = loadStartMinimized();
+  applyPinned(loadPinned());
   applyOpacity(loadOpacity());
   applyScale(loadScale());
   applyHotkeyLabel();

@@ -51,6 +51,18 @@ fn set_interactive_rects(state: tauri::State<'_, InteractiveRects>, rects: Vec<R
     *state.0.lock().unwrap() = rects;
 }
 
+/// Header's pin toggle — when true, the click-through poll loop's
+/// click-away-to-dismiss (see its own comment further down) is skipped, so
+/// the overlay stays up while the player clicks around in the game. Default
+/// false (existing behavior unchanged); the frontend pushes its persisted
+/// value here once at startup and again on every toggle.
+struct PinState(Mutex<bool>);
+
+#[tauri::command]
+fn set_pinned(state: tauri::State<'_, PinState>, pinned: bool) {
+    *state.0.lock().unwrap() = pinned;
+}
+
 /// Defensive recompose nudge against the intermittent WebView2/
 /// DirectComposition black-frame race (window reports visible/correctly
 /// positioned but paints nothing) — observed on the click-through hover
@@ -212,6 +224,18 @@ fn simulate_copy() -> Result<(), String> {
 fn hide_window(window: tauri::WebviewWindow) -> Result<(), String> {
     println!("[overlay] hide_window invoked by frontend");
     window.hide().map_err(|e| e.to_string())
+}
+
+/// Settings' "Start minimized" toggle needs to tell a Windows-autostart
+/// launch apart from the user double-clicking the exe — the autostart
+/// plugin is configured (see `run()`) to always append `--autostart` to the
+/// command line it registers in the HKCU Run key, so a plain manual launch
+/// never has this arg. The frontend only skips `show_window` on init when
+/// both this is true AND the user's own toggle is on — a manual launch
+/// always shows the window regardless of the toggle.
+#[tauri::command]
+fn was_autostart_launch() -> bool {
+    std::env::args().any(|a| a == "--autostart")
 }
 
 #[tauri::command]
@@ -612,11 +636,12 @@ pub fn run() {
         // real target) but required at compile time by the plugin's API.
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--autostart"]),
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(InteractiveRects(Mutex::new(Vec::new())))
+        .manage(PinState(Mutex::new(false)))
         .invoke_handler(tauri::generate_handler![
             set_interactive_rects,
             log_window_diagnostics,
@@ -625,6 +650,8 @@ pub fn run() {
             reveal_window,
             simulate_copy,
             hide_window,
+            was_autostart_launch,
+            set_pinned,
             get_hotkey_base,
             set_hotkey_base
         ])
@@ -748,8 +775,10 @@ pub fn run() {
                         // reported interactive rect is, by definition, a click-through
                         // click into the game — hide the overlay so it doesn't linger
                         // over gameplay until the player deliberately re-checks with Ins
-                        // (see reveal_window / hotkeys.ts's Insert handler).
-                        if left_click_since_last_poll() && !inside {
+                        // (see reveal_window / hotkeys.ts's Insert handler). Skipped
+                        // entirely when the header's pin toggle is on (PinState).
+                        let pinned = *handle.state::<PinState>().0.lock().unwrap();
+                        if left_click_since_last_poll() && !inside && !pinned {
                             let _ = handle.hide();
                         }
 

@@ -24,9 +24,6 @@ const TIER_META: Record<VisualTier, { heading: string; icon: string }> = {
 
 const TIER_ORDER: VisualTier[] = ["high", "medium", "low"];
 
-/** LOW rows beyond this count are hidden behind a "+N more" toggle. */
-const LOW_VISIBLE_MAX = 3;
-
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
@@ -39,15 +36,21 @@ function groupByTier(hits: DangerHitView[]): Record<VisualTier, DangerHitView[]>
   return groups;
 }
 
-function row(hit: DangerHitView, tier: VisualTier, hidden: boolean): string {
-  return `<div class="dl-row dl-${tier}${hidden ? " dl-hidden" : ""}"><span class="dl-ic">${
+function row(hit: DangerHitView, tier: VisualTier): string {
+  return `<div class="dl-row dl-${tier}"><span class="dl-ic">${
     TIER_META[tier].icon
   }</span><span class="dl-lab">${esc(hit.label)}</span></div>`;
 }
 
 /** Renders the grouped danger list as an HTML string, or "" when there are
  *  no hits (the surrounding Insights column renders its own content; an
- *  explicit empty-state line would just add noise). */
+ *  explicit empty-state line would just add noise). Every hit shows, full
+ *  column, no cap (2026-07-22, user request — the old "+N more" toggle
+ *  behind a fixed low-severity cap is gone; the bonus row moved to icon
+ *  badges the same day specifically to make room for this). Reverted
+ *  back to text rows from a brief icon-badge version the same day — user
+ *  call: only the Bonus row gets the icon-badge/footer treatment, not
+ *  the danger list itself. */
 export function renderDangerList(hits: DangerHitView[]): string {
   if (hits.length === 0) return "";
 
@@ -59,31 +62,8 @@ export function renderDangerList(hits: DangerHitView[]): string {
     if (group.length === 0) continue;
 
     if (TIER_META[tier].heading) parts.push(`<div class="dl-group-h dl-${tier}">${TIER_META[tier].heading}</div>`);
-
-    const collapsible = tier === "low" && group.length > LOW_VISIBLE_MAX;
-    group.forEach((hit, i) => parts.push(row(hit, tier, collapsible && i >= LOW_VISIBLE_MAX)));
-    if (collapsible) {
-      const hiddenCount = group.length - LOW_VISIBLE_MAX;
-      parts.push(
-        `<button class="dl-more" type="button" data-dl-toggle data-more="+${hiddenCount} more" data-less="− less">+${hiddenCount} more</button>`,
-      );
-    }
+    group.forEach((hit) => parts.push(row(hit, tier)));
   }
 
   return `<div class="danger-list">${parts.join("")}</div>`;
-}
-
-/** One delegated listener on a stable ancestor (the insights container
- *  survives innerHTML re-renders; the list itself doesn't). Clicks work in
- *  Full mode because the insights column is already in the click-through
- *  whitelist — no interactive-rect changes needed. */
-export function bindDangerListToggle(container: HTMLElement): void {
-  container.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-dl-toggle]");
-    if (!btn) return;
-    const list = btn.closest(".danger-list");
-    if (!list) return;
-    const expanded = list.classList.toggle("dl-expanded");
-    btn.textContent = expanded ? btn.dataset.less! : btn.dataset.more!;
-  });
 }

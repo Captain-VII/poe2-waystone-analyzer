@@ -1,5 +1,6 @@
-import { CAPS, computeDangerLevel, dangerHitsToWarnings, type DangerHit } from "./analyzer/scoring";
+import { computeDangerLevel, dangerHitsToWarnings, STAT_REFERENCES, type DangerHit } from "./analyzer/scoring";
 import { DANGER_LABELS, describeDangerHits } from "./analyzer/adapter";
+import { tierForPercent } from "./analyzer/mechanics";
 import { formatPercent, getScoreLabel } from "./analyzer/displayAdapter";
 import { MECHANIC_MASTERS, MECHANIC_MASTER_NOTABLES } from "./analyzer/atlas-masters";
 import type { AnalysisResult, TierClass, Verdict } from "./types";
@@ -81,31 +82,23 @@ function fixture(
       // (scoring.ts's DEFAULT_WEIGHTS), this fixture just never rendered
       // the 5th, leaving a dead gap above Total Heat that a real waystone
       // with a Drop Chance mod doesn't have.
-      breakdown: [
-        { key: "itemRarity", label: "Item Rarity", value: br[0], display: formatPercent(br[0]), max: CAPS.itemRarity },
-        { key: "packSize", label: "Pack Size", value: br[2], display: formatPercent(br[2]), max: CAPS.packSize },
-        {
-          key: "monsterRarity",
-          label: "Monster Rarity",
-          value: br[1],
-          display: formatPercent(br[1]),
-          max: CAPS.monsterRarity,
-        },
-        {
-          key: "monsterEffectiveness",
-          label: "Monster Effectiveness",
-          value: br[3],
-          display: formatPercent(br[3]),
-          max: CAPS.monsterEffectiveness,
-        },
-        {
-          key: "waystoneDropChance",
-          label: "Waystone Drop Chance",
-          value: br[4],
-          display: formatPercent(br[4]),
-          max: CAPS.waystoneDropChance,
-        },
-      ],
+      breakdown: (
+        [
+          { key: "itemRarity", label: "Item Rarity", value: br[0] },
+          { key: "packSize", label: "Pack Size", value: br[2] },
+          { key: "monsterRarity", label: "Monster Rarity", value: br[1] },
+          { key: "monsterEffectiveness", label: "Monster Effectiveness", value: br[3] },
+          { key: "waystoneDropChance", label: "Waystone Drop Chance", value: br[4] },
+        ] as const
+      ).map((row) => {
+        const max = STAT_REFERENCES[row.key];
+        return {
+          ...row,
+          display: formatPercent(row.value),
+          max,
+          tier: tierForPercent((Math.abs(row.value) / max) * 100),
+        };
+      }),
     },
     modifiers: MODIFIERS,
     tablets: TABLETS,

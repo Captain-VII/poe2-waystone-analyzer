@@ -12,6 +12,8 @@ const KEYS = {
   sessionStats: "overlay.sessionStats",
   sessionHistory: "overlay.sessionHistory",
   analysisLog: "overlay.analysisLog",
+  startMinimized: "overlay.startMinimized",
+  pinned: "overlay.pinned",
 } as const;
 
 export function loadReduceEffects(): boolean {
@@ -20,6 +22,30 @@ export function loadReduceEffects(): boolean {
 
 export function saveReduceEffects(enabled: boolean): void {
   localStorage.setItem(KEYS.reduceEffects, String(enabled));
+}
+
+/** Settings' "Start minimized" toggle — only takes effect on a launch the
+ *  Rust side confirms actually came from the Windows autostart entry (see
+ *  lib.rs's was_autostart_launch), so a manual double-click of the exe
+ *  always shows the window regardless of this setting. */
+export function loadStartMinimized(): boolean {
+  return localStorage.getItem(KEYS.startMinimized) === "true";
+}
+
+export function saveStartMinimized(enabled: boolean): void {
+  localStorage.setItem(KEYS.startMinimized, String(enabled));
+}
+
+/** Header's pin toggle — keeps the overlay up when clicking elsewhere in
+ *  the game (normally a click-through click hides it, see lib.rs's
+ *  PinState). Persisted so it survives restarts; pushed to Rust at startup
+ *  and on every toggle (RelicPanel.ts/main.ts). */
+export function loadPinned(): boolean {
+  return localStorage.getItem(KEYS.pinned) === "true";
+}
+
+export function savePinned(pinned: boolean): void {
+  localStorage.setItem(KEYS.pinned, String(pinned));
 }
 
 /** Drag-to-reposition (placement.ts): a user-dragged window position,
