@@ -45,6 +45,7 @@ import { buildEditorModel, buildMetaFile, type MechanicEdit, type MetaEditorMode
 import { notifyLegendaryWaystone, notifyUpdateAvailable } from "./notify";
 import { playJuicyChime } from "./sound";
 import { checkForUpdate, installUpdate } from "./updater";
+import { decodeWaystoneShare, encodeWaystoneShare } from "./analyzer/share";
 import { loadUpdateChannelBeta } from "./overlaySettings";
 import { shouldShowChangelog, markChangelogSeen } from "./changelog";
 import type { AnalysisResult, TierClass } from "./types";
@@ -55,6 +56,9 @@ let analyzing = false;
  *  env var the webview can't read itself). Gates the debug corner. */
 let debugOverlay = false;
 let lastNotifiedName: string | null = null; // avoid re-notifying on repeat/no-op analyzes
+// Raw item text of the last successful analysis — source for the header's
+// Share button (share.ts encodes this exact text, not a separate summary).
+let lastWaystoneText: string | null = null;
 
 // Session stats (Settings panel): one score per waystone name, persisted —
 // see settings.ts's SessionStats for the dedupe/session semantics.
@@ -135,6 +139,43 @@ async function copySummary(text: string): Promise<boolean> {
   }
 }
 
+/** Header's share button — encodes the last analyzed waystone's raw item
+ *  text (share.ts) and writes the code to the clipboard, ready to paste
+ *  into Discord. Same Tauri-only pattern as copySummary above; fails if
+ *  nothing has been analyzed yet this session. */
+async function shareWaystone(): Promise<boolean> {
+  if (!lastWaystoneText || !("__TAURI_INTERNALS__" in window)) return false;
+  try {
+    const code = await encodeWaystoneShare(lastWaystoneText);
+    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+    await writeText(code);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Session tab's "Import from clipboard" button — decodes a share.ts code
+ *  back into item text and runs it through the normal analysis pipeline,
+ *  same as a real Ins press, except it doesn't touch session stats or
+ *  trigger the Juicy notification/chime (it isn't the player's own find). */
+async function importSharedWaystone(): Promise<boolean> {
+  if (!("__TAURI_INTERNALS__" in window)) return false;
+  try {
+    const { readText } = await import("@tauri-apps/plugin-clipboard-manager");
+    const clip = await readText();
+    if (!clip) return false;
+    const decoded = await decodeWaystoneShare(clip);
+    if (!decoded) return false;
+    const result = analyzeWaystoneText(decoded);
+    if (!result) return false;
+    overlay.setResult(result);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Header's pin toggle — persists the value and pushes it to Rust's
  *  PinState (lib.rs's set_pinned) so the click-away-to-dismiss poll loop
  *  can skip hiding the window. Also called once at startup with the
@@ -192,6 +233,8 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
   onResetStats: resetSessionStats,
   onExportHistory: exportSessionHistory,
   onCopySummary: copySummary,
+  onShareWaystone: "__TAURI_INTERNALS__" in window ? shareWaystone : undefined,
+  onImportShare: "__TAURI_INTERNALS__" in window ? importSharedWaystone : undefined,
   onSetPinned: (pinned) => void setPinned(pinned),
   metaEditor: "__TAURI_INTERNALS__" in window ? metaEditor : undefined,
   // Dev-only: clicking the tier badge cycles the mock fixtures, for UI
@@ -257,6 +300,7 @@ async function analyze(simulateCopy = true): Promise<void> {
       failure = "not-waystone";
     } else {
       overlay.setResult(result);
+      lastWaystoneText = clip;
       if (debugOverlay) {
         overlay.setDebugInfo({
           modCount: result.waystone.modCount,

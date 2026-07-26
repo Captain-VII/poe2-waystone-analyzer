@@ -84,6 +84,17 @@ export interface OverlayOptions {
    *  feedback. Undefined in plain-browser dev, same convention as
    *  onExportHistory above. */
   onCopySummary?(text: string): Promise<boolean>;
+  /** Header's share button. main.ts encodes the currently analyzed
+   *  waystone's raw item text into a compact code (share.ts) and writes it
+   *  to the clipboard, ready to paste into Discord — same feedback
+   *  convention as onCopySummary. Undefined in plain-browser dev, or if
+   *  nothing has been analyzed yet this session. */
+  onShareWaystone?(): Promise<boolean>;
+  /** Session tab's "Import from clipboard" button. main.ts reads the
+   *  clipboard, decodes a share.ts code back into item text, and re-runs
+   *  the normal analysis — same feedback convention as onExportHistory.
+   *  Doesn't touch session stats (it isn't the player's own find). */
+  onImportShare?(): Promise<boolean>;
   /** Header's pin toggle. main.ts persists the value and pushes it to
    *  Rust's PinState (lib.rs) so the click-away-to-dismiss poll loop can
    *  skip hiding the window. Self-guards on Tauri presence like
@@ -227,6 +238,7 @@ const CORNER_PATHS = `
 // the header's own diamond glyph and corner ornaments above, which have
 // never had this problem, being plain vector paths rather than font glyphs.
 const COPY_ICON_SVG = `<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="6" y="1.5" width="8" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="4.5" width="8" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`;
+const SHARE_ICON_SVG = `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="12.5" cy="3.5" r="2" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="3.5" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12.5" cy="12.5" r="2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.3 7 L10.8 4.3 M5.3 9 L10.8 11.7" stroke="currentColor" stroke-width="1.2"/></svg>`;
 const PIN_ICON_SVG = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c-2 0-3.5 1.5-3.5 3.5 0 1.6 1.4 3.6 2.8 5.1L8 15l0.7-4.9c1.4-1.5 2.8-3.5 2.8-5.1 0-2-1.5-3.5-3.5-3.5Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="5" r="1.3" fill="currentColor"/></svg>`;
 // One icon per *kind* of line adapter.ts actually emits (see
 // categorizeInsight) — deliberately distinguishable at a glance from each
@@ -324,6 +336,7 @@ export function mountOverlay(
           <button class="badge" data-badge></button>
           <button class="guide-btn" data-guide-show type="button" title="Guide" aria-label="Open guide">?</button>
           <button class="copy-btn" data-copy type="button" title="Copy summary" aria-label="Copy waystone summary">${COPY_ICON_SVG}</button>
+          <button class="share-btn" data-share type="button" title="Copy shareable code (paste into Discord)" aria-label="Copy shareable waystone code">${SHARE_ICON_SVG}</button>
           <button class="pin-btn" data-pin type="button" title="Keep open when clicking elsewhere" aria-label="Pin overlay open">${PIN_ICON_SVG}</button>
           <button class="settings-btn" data-settings title="Settings" aria-label="Toggle settings panel">⚙</button>
           <button class="minimize-btn" data-minimize title="Minimize to tray (Esc)" aria-label="Minimize overlay to tray">–</button>
@@ -432,6 +445,10 @@ export function mountOverlay(
                   <span class="set-lab">History</span>
                   <button class="set-btn" data-stat-export type="button" disabled>Export CSV</button>
                 </div>
+                <div class="set-row" title="Decodes a shared waystone code from your clipboard and shows its analysis — doesn't count toward your own session stats">
+                  <span class="set-lab">Shared code</span>
+                  <button class="set-btn" data-import-share type="button">Import from clipboard</button>
+                </div>
               </div>
               <div class="set-tabpanel" role="tabpanel" data-set-tabpanel="meta">
                 <div class="set-group" data-meta-section>
@@ -537,6 +554,7 @@ export function mountOverlay(
   const miniWarn = q("[data-mini-warn]");
   const scoreFull = q("[data-score-full]");
   const copyBtn = q("[data-copy]") as HTMLButtonElement;
+  const shareBtn = q("[data-share]") as HTMLButtonElement;
   const pinBtn = q("[data-pin]") as HTMLButtonElement;
   const statusChip = q("[data-status]");
   const footBtn = q("[data-foot]");
@@ -581,6 +599,7 @@ export function mountOverlay(
   const statHistoryEl = q("[data-stat-history]");
   const statLogEl = q("[data-stat-log]");
   const statExportBtn = q("[data-stat-export]") as HTMLButtonElement;
+  const importShareBtn = q("[data-import-share]") as HTMLButtonElement;
   const metaSection = q("[data-meta-section]");
   const metaMechSel = q("[data-meta-mech]") as HTMLButtonElement;
   const metaPrioritySel = q("[data-meta-priority]") as HTMLButtonElement;
@@ -1743,6 +1762,15 @@ export function mountOverlay(
       copyFeedbackTimer = setTimeout(() => (copyBtn.innerHTML = COPY_ICON_SVG), 1200);
     })();
   });
+  let shareFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+  shareBtn.addEventListener("click", () => {
+    void (async () => {
+      const ok = (await opts.onShareWaystone?.()) ?? false;
+      clearTimeout(shareFeedbackTimer);
+      shareBtn.textContent = ok ? "✓" : "✗";
+      shareFeedbackTimer = setTimeout(() => (shareBtn.innerHTML = SHARE_ICON_SVG), 1200);
+    })();
+  });
   function applyPinned(pinned: boolean): void {
     pinBtn.classList.toggle("active", pinned);
     pinBtn.title = pinned
@@ -1798,6 +1826,15 @@ export function mountOverlay(
       clearTimeout(exportFeedbackTimer);
       statExportBtn.textContent = ok ? "Copied!" : "Failed";
       exportFeedbackTimer = setTimeout(() => (statExportBtn.textContent = "Export CSV"), 1500);
+    })();
+  });
+  let importFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+  importShareBtn.addEventListener("click", () => {
+    void (async () => {
+      const ok = (await opts.onImportShare?.()) ?? false;
+      clearTimeout(importFeedbackTimer);
+      importShareBtn.textContent = ok ? "Imported!" : "Invalid code";
+      importFeedbackTimer = setTimeout(() => (importShareBtn.textContent = "Import from clipboard"), 1500);
     })();
   });
   if (opts.metaEditor) {

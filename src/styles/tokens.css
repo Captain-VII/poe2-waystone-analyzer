@@ -10,7 +10,7 @@
   --god: #ffd36a;
   --ivory: #f1e6c8;
   --grey: #b8a98a;
-  --danger: #b54a3a;
+  --danger: #d06550; /* WCAG AA (>=4.5:1) on all panel/header backgrounds */
   --track: #2a2118;
   --serif: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --sans: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;

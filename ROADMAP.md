@@ -86,9 +86,13 @@ Vrac à trier.
 - [ ] **Export/import des réglages et de l'historique** dans un fichier,
       pour reprendre sa configuration sur une autre machine ou après une
       réinstallation.
-- [ ] **Partage de waystone** : encoder l'analyse en chaîne compacte à
-      coller dans Discord, décodable par une autre instance. Zéro serveur,
-      juste du parsing bidirectionnel.
+- [x] **Partage de waystone** — livré 2026-07-26 : le code encode l'item
+      text brut (gzip + base64url, `share.ts`), pas un résumé séparé du
+      score — décoder relance juste `analyzeWaystoneText` normalement, donc
+      ça ne peut jamais diverger de `scoring.ts`. Zéro serveur. Bouton
+      partage dans le header, import via Réglages → Session (lit le
+      presse-papier, ne compte pas dans les stats de session du joueur qui
+      importe).
 - [x] **Tablettes favorites** — livré 2026-07-26 : « Pin to top » dans le
       popup d'une tablette la remonte en tête de la liste quel que soit son
       fit, avec une ★ sur la ligne. Épinglage par nom (survit à un ajout/

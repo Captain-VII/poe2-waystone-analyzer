@@ -901,6 +901,7 @@
 .minimize-btn,
 .guide-btn,
 .copy-btn,
+.share-btn,
 .pin-btn {
   flex: none;
   width: 26px;
@@ -922,11 +923,13 @@
    comment — real emoji didn't render reliably here) — sized explicitly
    since these have no font-size to key off like their ?/⚙/– siblings. */
 .copy-btn svg,
+.share-btn svg,
 .pin-btn svg { width: 13px; height: 13px; }
 .settings-btn:hover,
 .minimize-btn:hover,
 .guide-btn:hover,
 .copy-btn:hover,
+.share-btn:hover,
 .pin-btn:hover {
   color: var(--gold-hi);
   border-color: var(--gold-hi);
@@ -956,11 +959,13 @@
 .minimize-btn:active,
 .guide-btn:active,
 .copy-btn:active,
+.share-btn:active,
 .pin-btn:active { transform: scale(0.97); }
 .settings-btn:focus-visible,
 .minimize-btn:focus-visible,
 .guide-btn:focus-visible,
 .copy-btn:focus-visible,
+.share-btn:focus-visible,
 .pin-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .settings-btn.active {
   color: var(--gold-hi);
@@ -972,6 +977,7 @@
 .mode-mini .minimize-btn,
 .mode-mini .guide-btn,
 .mode-mini .copy-btn,
+.mode-mini .share-btn,
 .mode-mini .pin-btn { display: none; }
 
 /* ---- tier states (§6) ---- */

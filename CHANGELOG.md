@@ -7,6 +7,8 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+- **New: share a waystone with a code.** The header's new share button copies a compact code for the analyzed waystone — paste it into Discord, and anyone else running the app can import it (Settings → Session → Import from clipboard) to see the exact same analysis.
+- **New: WCAG AA contrast pass on the danger/warning color** — brightened so warning text stays readable at a glance against every panel background.
 - **Editing `meta.json` in a text editor no longer needs a restart** — the app notices the change and reloads your customizations on the spot. Your next analysis uses them.
 - **New: pin a tablet to the top of the list.** Click a tablet, turn on **Pin to top**, and it stays at the top with a ★ even on a waystone it fits poorly — handy when you're farming one mechanic.
 - **Settings is now four tabs instead of one long scroll**: **Overlay** (display and controls), **Session** (your per-session stats and history), **Meta** (per-mechanic customization) and **App** (startup, updates, version). Each opens where you left off, and startup options moved next to the other app-level settings.
