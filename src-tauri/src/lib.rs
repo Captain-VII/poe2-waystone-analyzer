@@ -568,6 +568,12 @@ async fn check_update_channel(
         .updater_builder()
         .endpoints(vec![endpoint])
         .map_err(|e| e.to_string())?
+        // Default comparator only offers a *greater* version — switching
+        // the Settings toggle to Stable while running a beta needs the
+        // opposite direction too (offer downgrading back to the latest
+        // stable release), so any version difference counts, not just an
+        // increase.
+        .version_comparator(|current, release| release.version != current)
         .build()
         .map_err(|e| e.to_string())?;
     let update = updater.check().await.map_err(|e| e.to_string())?;

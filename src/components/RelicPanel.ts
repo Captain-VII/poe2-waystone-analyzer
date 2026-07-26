@@ -1634,6 +1634,30 @@ export function mountOverlay(
     updateBtn.disabled = false;
   }
 
+  /** Runs a fresh check on whichever channel Settings currently has
+   *  selected, driving the same button/message UI a manual "Check for
+   *  updates" click does — used by that click AND by the Beta channel
+   *  toggle (switching channel invalidates any pending check for the old
+   *  one, hence resetting `updateVersion` first). Never installs anything
+   *  itself: still the player's own explicit "Install vX.Y.Z" click for
+   *  that, same as always. */
+  function runUpdateCheck(): void {
+    const onCheckUpdate = opts.onCheckUpdate;
+    if (!onCheckUpdate) return;
+    updateVersion = null;
+    updateBtn.disabled = true;
+    updateBtn.textContent = "Checking…";
+    void onCheckUpdate().then((info) => {
+      if (info) {
+        setUpdateAvailable(info.version);
+      } else {
+        updateBtn.textContent = "Check for updates";
+        updateBtn.disabled = false;
+        showUpdateMsg("Up to date", false, true);
+      }
+    });
+  }
+
   function setSessionStats(view: SessionStatsView): void {
     statCountEl.textContent = String(view.count);
     statAvgEl.textContent = view.avg === null ? "—" : view.avg.toFixed(1);
@@ -1786,6 +1810,7 @@ export function mountOverlay(
   });
   setUpdateChannelBetaInput.addEventListener("change", () => {
     saveUpdateChannelBeta(setUpdateChannelBetaInput.checked);
+    runUpdateCheck();
   });
   if (opts.onSetAutostart) {
     const onSetAutostart = opts.onSetAutostart;
@@ -1853,7 +1878,7 @@ export function mountOverlay(
     opts.onSetPinned?.(pinned);
   });
   if (opts.onCheckUpdate && opts.onInstallUpdate) {
-    const { onCheckUpdate, onInstallUpdate } = opts;
+    const { onInstallUpdate } = opts;
     updateBtn.addEventListener("click", () => {
       if (updateVersion) {
         // Install path — explicit user click, the only place an install
@@ -1871,17 +1896,7 @@ export function mountOverlay(
         // Success needs no handler: the passive NSIS updater relaunches
         // the app, this whole DOM is torn down mid-install.
       } else {
-        updateBtn.disabled = true;
-        updateBtn.textContent = "Checking…";
-        void onCheckUpdate().then((info) => {
-          if (info) {
-            setUpdateAvailable(info.version);
-          } else {
-            updateBtn.textContent = "Check for updates";
-            updateBtn.disabled = false;
-            showUpdateMsg("Up to date", false, true);
-          }
-        });
+        runUpdateCheck();
       }
     });
   } else {

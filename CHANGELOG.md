@@ -7,6 +7,8 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+- **Toggling the Beta channel now checks for an update right away** instead of waiting for a manual "Check for updates" click — switch it on to see the latest beta, switch it off to be offered the latest stable build again (even if that means stepping back down from a beta you're currently running).
+
 ## 0.6.0-beta.1
 
 - **New: an "Export Logs" button in Settings → App.** Opens the folder with diagnostic logs, so you can share the latest file with support when something's wrong (like the overlay not showing up).
