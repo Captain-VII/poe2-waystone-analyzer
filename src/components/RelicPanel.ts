@@ -702,9 +702,22 @@ export function mountOverlay(
       monsterEffectiveness: "Monster Eff.",
       waystoneDropChance: "Drop Chance",
     };
+    // Same wording as guide.ts's per-stat explanations (§"What each stat
+    // means") — one voice for "why does this stat matter" across the app,
+    // just reachable one hover closer here instead of opening the Guide.
+    const BREAKDOWN_TOOLTIPS: Partial<Record<string, string>> = {
+      itemRarity: "Better quality of everything the map drops (more rares/uniques).",
+      monsterRarity: "More magic and rare monsters spawn; each one drops more on its own.",
+      packSize: "More monsters per pack overall, so more kills, more drops. Favors dense mechanics like Delirium.",
+      monsterEffectiveness:
+        "Monsters hit harder and take more to kill; raises rewards, but is danger-adjacent (see Warnings below).",
+      waystoneDropChance:
+        "More Waystones come back from the map, sustaining your mapping. Rolls much higher than the other four, so its bar is measured against its own higher ceiling.",
+    };
     q("[data-breakdown]").innerHTML = heat.breakdown
       .map((b) => {
         const shortLabel = BREAKDOWN_SHORT_LABELS[b.key] ?? b.label;
+        const tooltip = BREAKDOWN_TOOLTIPS[b.key] ? `${b.label} — ${BREAKDOWN_TOOLTIPS[b.key]}` : b.label;
         // Fill bar + tier coloring (2026-07-22): |value|/max against the
         // same STAT_REFERENCES ceiling the Juice Score itself uses, so a
         // row's own visual weight matches how strong that stat actually is
@@ -713,7 +726,7 @@ export function mountOverlay(
         const tierClass = b.tier ? ` stat-${b.tier}` : "";
         return `
         <div class="brow${tierClass}" style="--fill: ${fillPct}%">
-          <span class="b-lab" title="${esc(b.label)}">${esc(shortLabel)}</span>
+          <span class="b-lab" title="${esc(tooltip)}">${esc(shortLabel)}</span>
           <span class="b-val">${b.display ?? fmtDelta(b.value)}</span>
         </div>`;
       })

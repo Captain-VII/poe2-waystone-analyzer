@@ -169,9 +169,10 @@ Vrac à trier.
       sur disque et rapporte l'erreur JSON exacte avec ligne/colonne
       (`validateMetaFile`, meta-schema.ts), au lieu du fallback silencieux
       qu'utilise `loadMetaConfig` partout ailleurs.
-- [ ] **Micro-infobulles** sur chaque stat du Heat Breakdown (« Pack Size :
-      favorise les mécaniques denses comme Delirium »), en complément du
-      Guide qui explique déjà le scoring d'ensemble.
+- [x] **Micro-infobulles** — livré 2026-07-26 : le hover de chaque stat du
+      Heat Breakdown reprend la phrase du Guide expliquant ce qu'elle mesure
+      (`BREAKDOWN_TOOLTIPS`, RelicPanel.ts), une seule voix entre le Guide et
+      le panneau au lieu de deux textes qui pourraient diverger.
 
 ### Écartés pour l'instant
 

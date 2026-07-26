@@ -7,6 +7,7 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+- **New: hover any Heat Breakdown stat** for a one-line explanation of what it measures — the same wording as the in-app Guide.
 - **New: a "Validate meta.json" button** in Settings — re-checks the file on disk and reports the exact JSON error (with line/column) instead of silently falling back to defaults.
 - **New: a "Search on poe2.re" link** in the tablet mechanic popup — jumps to poe2.re's tablet search page for the community's maintained trade-string generator, instead of us duplicating it.
 
