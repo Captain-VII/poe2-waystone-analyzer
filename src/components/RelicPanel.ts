@@ -583,6 +583,7 @@ export function mountOverlay(
   const skipNoBtn = q("[data-skip-no]") as HTMLButtonElement;
   const footBtn = q("[data-foot]");
   const colTablets = q("[data-col-tablets]");
+  const colHeat = q("[data-col-heat]");
   const colInsights = q("[data-col-insights]");
   const tabletsFullEl = q("[data-tablets-full]");
   const tabletsAsideEl = q("[data-tablets-aside]");
@@ -1726,10 +1727,8 @@ export function mountOverlay(
     // §2: header (settings/guide/badge live inside it, plus its own
     // background is the drag handle) / footer / mod-scroll only. Without
     // drag support (plain-browser dev), fall back to the narrower
-    // settings/guide-only zone the header used to report — the badge
-    // is only interactive there in dev builds anyway (mock-tier cycling).
+    // settings/guide-only zone the header used to report.
     const els = opts.onDragStart ? [headEl] : [settingsBtn, minimizeBtn, guideShowBtn];
-    if (!opts.onDragStart && opts.onCycleTier) els.push(badge, miniBadge);
     if (settingsOpen) return [...els, settingsPanel]; // whole panel as one rect
     if (changelogOpen) return [...els, changelogPanel]; // scroll + Fermer button
     if (guideOpen) return [...els, guidePanel]; // scroll + Close button
@@ -1741,13 +1740,17 @@ export function mountOverlay(
     // above the header, and reporting the exact rect isn't worth it for a
     // rare, short-lived (10s auto-dismiss) Yes/No prompt.
     if (skipFeedbackOpen) return [...els, panel];
-    // footBtn: the click-to-analyze footer button. colTablets/colInsights:
-    // either column can overflow-scroll on some DPI/font combos — without
-    // reporting them here, a mouse-wheel over them falls through to the
-    // game like everywhere else outside the click-through whitelist, so
+    // footBtn: the click-to-analyze footer button. colTablets/colHeat/
+    // colInsights: any column can overflow-scroll on some DPI/font combos —
+    // without reporting them here, a mouse-wheel over them falls through to
+    // the game like everywhere else outside the click-through whitelist, so
     // the scroll never fires in practice (reported: "le scroll ne marche
-    // pas" in-game).
-    if (effective === "full") els.push(footBtn, colTablets, colInsights);
+    // pas" in-game). colHeat also carries the Heat Breakdown row tooltips
+    // and, in dev builds, the mock-tier-cycle minibadge — omitting it here
+    // meant both were unreachable in the real overlay (click-through passed
+    // straight to the game underneath), even though a browser-only preview
+    // (no click-through logic at all) made them look reachable.
+    if (effective === "full") els.push(footBtn, colTablets, colHeat, colInsights);
     return els;
   }
 
