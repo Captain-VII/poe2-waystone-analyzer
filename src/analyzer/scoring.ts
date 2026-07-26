@@ -6,10 +6,25 @@
  *  intéressantes"): find the waystone's single strongest stat (normalized
  *  against its own realistic ceiling — see `STAT_REFERENCES`, sourced
  *  2026-07-11 from the user's own observed market min/max per stat), tier
- *  it with the same 15/25/50 boundaries already used for
- *  mechanic/tablet fit (`mechanics.ts`'s `tierForPercent`), and add a small
- *  bonus for every OTHER stat that also clears "ok". See
- *  `computeCompositeScore` below. This replaces the 2026-07-06 weighted-sum
+ *  the RESULT with the same 15/25/50 THRESHOLD NUMBERS as mechanic/tablet
+ *  fit (`mechanics.ts`'s `tierForPercent`), and add a small bonus for every
+ *  OTHER stat that also clears "ok". See `computeCompositeScore` below.
+ *
+ *  Sharing those threshold numbers does NOT make this the same measurement
+ *  as a mechanic's own fit, though — they're deliberately answering two
+ *  different questions on two different scales. A mechanic's fit
+ *  (`mechanics.ts`'s `priorityStatTier`) tiers a stat's RAW %, i.e. "is this
+ *  roll strong in absolute terms". This dominant-stat model tiers the
+ *  NORMALIZED %, i.e. "how close is this roll to that stat's own realistic
+ *  ceiling" — necessary here since picking a fair "dominant" stat across
+ *  differently-capped stats (Pack Size caps ~65%, Monster Effectiveness
+ *  ~70%, see `STAT_REFERENCES`) only works on a comparable scale. Since
+ *  normalizing raises the effective value for any stat whose ceiling is
+ *  below 100, the SAME raw roll can legitimately land in a higher tier here
+ *  than it does for its own mechanic's fit (e.g. +40% Monster Effectiveness
+ *  is "top" for Breach's raw-% fit but "legendary" for the headline score's
+ *  normalized reading) — that's expected, not a bug to chase, if you're
+ *  ever comparing the two side by side. This replaces the 2026-07-06 weighted-sum
  *  model (6 signals incl. a mechanic-density term, each capped and summed,
  *  then scaled by multiplicative mechanic/Pack-Size synergy) — that model
  *  was found to average away genuinely strong individual stats (a real
@@ -26,8 +41,12 @@
  *  Item Quantity (`ModStats.quantity`) is not one of the scored signals: it
  *  skewed results when weighted in (2026-07-06) and isn't part of the
  *  cahier des charges' 5 signals. It's still parsed (mod-parser.ts) and
- *  still used by the Mechanic Match Score (mechanics.ts's Heist/Harvest/
- *  Abyss/Expedition secondary stats) — only the Juice Score ignores it.
+ *  still used by the Mechanic Match Score, but only as Expedition's own
+ *  `priorityStat` (mechanics.ts) — every mechanic's `secondaryStats` (which
+ *  used to include quantity for a few more) stopped factoring into scoring
+ *  entirely on 2026-07-10, per `priorityStatTier`'s own doc comment; Heist/
+ *  Harvest, the other two mechanics that once read it, were removed the
+ *  same day. Only the Juice Score ignores quantity outright.
  *
  *  Danger/annoyance mods (reflect, no leech/regen, reduced recovery, fast
  *  monsters, elemental penetration, ...) are detected here too, but surface
