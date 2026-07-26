@@ -10,6 +10,9 @@ sert de description à la release GitHub — écrire pour les joueurs.
 - **New: an "Export Logs" button in Settings → App.** Opens the folder with diagnostic logs, so you can share the latest file with support when something's wrong (like the overlay not showing up).
 - **Diagnostic logs never store clipboard text.** Only a length is recorded now, not a preview — your clipboard can hold anything, not just waystones.
 - **Fixed: the overlay could get stuck off-screen if you disconnected the monitor it was on.** It now re-anchors onto whatever monitor is left.
+- **Fixed: a waystone's "increased Quantity of Waystones found" mod could inflate its Expedition score.** That mod line was being read as an Item Quantity roll too, on top of the Waystone Drop Chance it actually is — it no longer double-counts.
+- **Fixed: the Heat Breakdown column didn't respond to hovering or clicking.** Each stat's explanation tooltip is reachable again.
+- **Finished the danger-color contrast pass from a previous update** — a few remaining spots (the minimize button, a scrollbar, low tablet-fit percentages) were still showing the old, harder-to-read red.
 
 ## 0.5.0
 
