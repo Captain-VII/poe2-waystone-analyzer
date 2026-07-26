@@ -94,6 +94,7 @@ export interface OverlayOptions {
     saveMechanic(name: string, edit: MechanicEdit): Promise<MetaEditorModel>;
     setTabletEnabled(name: string, enabled: boolean): Promise<MetaEditorModel>;
     reset(): Promise<MetaEditorModel>;
+    validate(): Promise<{ ok: true } | { ok: false; message: string }>;
   };
 }
 
@@ -446,6 +447,10 @@ export function mountOverlay(
                   <span class="set-lab">Meta</span>
                   <button class="set-btn" data-meta-reset type="button">Restore defaults</button>
                 </div>
+                <div class="set-row" title="Re-reads meta.json from disk and reports the exact parse error, if any">
+                  <span class="set-lab">Meta</span>
+                  <button class="set-btn" data-meta-validate type="button">Validate meta.json</button>
+                </div>
               </div>
               <div class="set-sep"></div>
               <div class="sec-h">Application</div>
@@ -548,6 +553,7 @@ export function mountOverlay(
   const metaTabletsEl = q("[data-meta-tablets]");
   const metaMsg = q("[data-meta-msg]");
   const metaResetBtn = q("[data-meta-reset]") as HTMLButtonElement;
+  const metaValidateBtn = q("[data-meta-validate]") as HTMLButtonElement;
   const headEl = q("[data-head]");
   const hotkeyBtn = q("[data-set-hotkey]") as HTMLButtonElement;
   const hotkeyKbd = q("[data-hotkey-kbd]");
@@ -962,16 +968,17 @@ export function mountOverlay(
   let selectedMech = "";
   let metaMsgTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function showMetaMsg(text: string, opts2: { persistent?: boolean } = {}): void {
+  function showMetaMsg(text: string, opts2: { persistent?: boolean; ok?: boolean } = {}): void {
     metaMsg.textContent = text;
-    metaMsg.classList.add("err");
+    metaMsg.classList.toggle("err", !opts2.ok);
+    metaMsg.classList.toggle("ok", !!opts2.ok);
     metaMsg.hidden = false;
     clearTimeout(metaMsgTimer);
     if (!opts2.persistent) metaMsgTimer = setTimeout(() => (metaMsg.hidden = true), 3000);
   }
 
   function setMetaControlsDisabled(disabled: boolean): void {
-    for (const el of [metaMechSel, metaPrioritySel, metaSkipInput, metaResetBtn]) {
+    for (const el of [metaMechSel, metaPrioritySel, metaSkipInput, metaResetBtn, metaValidateBtn]) {
       el.disabled = disabled;
     }
     for (const input of metaTabletsEl.querySelectorAll("input")) input.disabled = disabled;
@@ -1636,6 +1643,14 @@ export function mountOverlay(
     metaSkipInput.addEventListener("input", () => (metaSkipVal.textContent = metaSkipInput.value));
     metaSkipInput.addEventListener("change", collectMechanicEdit);
     metaResetBtn.addEventListener("click", () => void metaAction((ed) => ed.reset()));
+    metaValidateBtn.addEventListener("click", () => {
+      const ed = opts.metaEditor;
+      if (!ed) return;
+      void ed.validate().then((result) => {
+        if (result.ok) showMetaMsg("meta.json is valid", { ok: true });
+        else showMetaMsg(result.message, { persistent: true });
+      });
+    });
     // Full-mode-only click-to-edit: delegated (rows are rebuilt on every
     // setResult, the container isn't). Gated on opts.metaEditor like the
     // rest of the Méta section — nothing to edit without IO.

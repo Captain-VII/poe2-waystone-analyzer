@@ -83,6 +83,30 @@ export function parseMetaFile(text: string): RawMetaFile | null {
   }
 }
 
+/** Same parse as `parseMetaFile`, but for the "Validate meta.json" button:
+ *  callers want the actual reason, not just a boolean. V8's JSON.parse
+ *  SyntaxError includes a character offset ("... in JSON at position N") —
+ *  converted here to a line/column a hand-editor can actually jump to. */
+export function validateMetaFile(text: string): { ok: true } | { ok: false; message: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const posMatch = /position (\d+)/.exec(msg);
+    if (!posMatch) return { ok: false, message: msg };
+    const pos = Number(posMatch[1]);
+    const before = text.slice(0, pos);
+    const line = before.split("\n").length;
+    const col = pos - before.lastIndexOf("\n");
+    return { ok: false, message: `${msg} (line ${line}, column ${col})` };
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { ok: false, message: "Root value must be a JSON object, e.g. { \"mechanics\": {...} }" };
+  }
+  return { ok: true };
+}
+
 function applyOverride(base: MechanicDef, raw: RawMechanicMeta): MechanicDef {
   const priorityStat = toStatKey(raw.priority_stat) ?? base.priorityStat;
   const secondaryStats = Array.isArray(raw.secondary_stats)

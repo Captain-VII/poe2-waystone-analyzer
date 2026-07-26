@@ -12,6 +12,7 @@ import {
   parseMetaFile,
   mergeMetaConfig,
   serializeMetaFile,
+  validateMetaFile,
   type RawMetaFile,
 } from "./meta-schema";
 
@@ -68,6 +69,22 @@ export async function saveMetaFile(file: RawMetaFile): Promise<void> {
   const { writeTextFile, BaseDirectory } = await import("@tauri-apps/plugin-fs");
   await writeTextFile("meta.json", serializeMetaFile(file), { baseDir: BaseDirectory.AppConfig });
   applyMerged(file);
+}
+
+/** On-demand check for the Settings "Validate meta.json" button: re-reads
+ *  the file from disk (picking up hand-edits made outside the app) and
+ *  reports the actual parse error instead of the silent "falls back to
+ *  defaults" behavior `loadMetaConfig` uses everywhere else. Absent file
+ *  reads as valid — nothing to validate. */
+export async function validateMetaFileOnDisk(): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!isTauri()) return { ok: true };
+  try {
+    const { readTextFile, BaseDirectory } = await import("@tauri-apps/plugin-fs");
+    const text = await readTextFile("meta.json", { baseDir: BaseDirectory.AppConfig });
+    return validateMetaFile(text);
+  } catch {
+    return { ok: true }; // absent/unreadable — same "no overrides yet" treatment as readRawMetaFile
+  }
 }
 
 /** "Rétablir les défauts": writes an empty object rather than deleting the

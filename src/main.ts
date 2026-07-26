@@ -33,7 +33,7 @@ import { reportInteractiveRegions } from "./interactive-rect";
 import { runDiagnostics, applyDebugOpaqueOverride, sendReport, showWhenPainted, logAnalyzeAttempt } from "./diagnostics";
 import { readClipboardText } from "./clipboard";
 import { analyzeWaystoneText } from "./analyzer/adapter";
-import { loadMetaConfig, readRawMetaFile, saveMetaFile, resetMetaFile } from "./analyzer/meta-config";
+import { loadMetaConfig, readRawMetaFile, saveMetaFile, resetMetaFile, validateMetaFileOnDisk } from "./analyzer/meta-config";
 import { buildEditorModel, buildMetaFile, type MechanicEdit, type MetaEditorModel } from "./analyzer/meta-schema";
 import { notifyLegendaryWaystone, notifyUpdateAvailable } from "./notify";
 import { playJuicyChime } from "./sound";
@@ -160,6 +160,7 @@ const metaEditor = {
     await resetMetaFile();
     return metaModelFromDisk();
   },
+  validate: validateMetaFileOnDisk,
 };
 
 const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier], {

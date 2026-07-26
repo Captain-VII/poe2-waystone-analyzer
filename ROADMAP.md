@@ -65,8 +65,9 @@ Vrac à trier.
       release publique. L'infrastructure existe déjà (tags `beta`,
       [BETA_NOTES.md](BETA_NOTES.md), flux updater) — ce qui manque, c'est
       le choix du canal côté app.
-- [ ] Vérifier que `scripts/verify-adapter.mjs` n'a plus de dépendance à un
-      checkout sibling v2 (fragilité CI potentielle relevée le 2026-07-11).
+- [x] Vérifié 2026-07-26 : `scripts/verify-adapter.mjs` inline déjà son
+      SAMPLE (commentaire explicite dans le fichier), aucune dépendance à un
+      checkout sibling v2 ni côté script ni côté CI. Rien à corriger.
 
 ### Fonctionnalités joueur
 
@@ -164,8 +165,10 @@ Vrac à trier.
 - [ ] **Mode debug** (`OVERLAY_DEBUG=1`) : un coin de l'overlay affichant
       mods parsés / score / temps de rebuild, pour itérer sur les formules
       sans redémarrer.
-- [ ] **Bouton « Valider meta.json »** dans les Réglages, indiquant la
-      ligne fautive — évite les cycles reset + redémarrage.
+- [x] **Bouton « Valider meta.json »** — livré 2026-07-26 : re-lit le fichier
+      sur disque et rapporte l'erreur JSON exacte avec ligne/colonne
+      (`validateMetaFile`, meta-schema.ts), au lieu du fallback silencieux
+      qu'utilise `loadMetaConfig` partout ailleurs.
 - [ ] **Micro-infobulles** sur chaque stat du Heat Breakdown (« Pack Size :
       favorise les mécaniques denses comme Delirium »), en complément du
       Guide qui explique déjà le scoring d'ensemble.

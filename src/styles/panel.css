@@ -712,6 +712,7 @@
 }
 .set-meta-msg[hidden] { display: none; }
 .set-meta-msg.err { color: var(--danger); }
+.set-meta-msg.ok { color: var(--gold-hi); }
 
 /* The binding is a button (click → capture the next keydown, see
    RelicPanel's onHotkeyCaptureKey) styled as a bare kbd chip — the chrome
