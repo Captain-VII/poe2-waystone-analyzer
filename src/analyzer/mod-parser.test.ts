@@ -23,6 +23,15 @@ describe("parseMods", () => {
     expect(drop.waystoneDropChance).toBe(15);
   });
 
+  it("does not double-count 'Quantity of Waystones found' as Item Quantity too", () => {
+    // Real PoE2 wording (also used in tablets.ts/adapter.e2e.test.ts's own
+    // fixtures) — this is a waystoneDropChance mod, not an Item Quantity
+    // one, even though it contains the bare word "quantity".
+    const result = parseMods("+120% increased Quantity of Waystones found in this Area");
+    expect(result.waystoneDropChance).toBe(120);
+    expect(result.quantity).toBe(0);
+  });
+
   it("parses a realistic multi-line mod block into all six fields", () => {
     const text = [
       "+85% increased Item Quantity",

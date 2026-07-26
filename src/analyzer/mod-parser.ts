@@ -26,7 +26,13 @@ const DEFAULT_RESULT: ModStats = {
 //   "+85% increased Item Quantity"    -> number before keyword
 //   "Item Quantity: +85% (augmented)" -> keyword before number
 export const PATTERNS: Record<keyof ModStats, RegExp> = {
-  quantity: /(?:(\d+)\s*%[^%\n]{0,20}?(?:item\s+)?quantity|(?:item\s+)?quantity[^%\d\n]{0,20}?(\d+)\s*%)/i,
+  // Excludes "quantity of Waystones (found/dropped)" — real PoE2 wording
+  // (also matched by waystoneDropChance below) that would otherwise
+  // double-count as Item Quantity too, since "(?:item\s+)?" alone doesn't
+  // rule it out. Same "exclude when qualified" pattern as itemRarity's
+  // monster-exclusion just below.
+  quantity:
+    /(?:(\d+)\s*%[^%\n]{0,20}?(?:item\s+)?quantity(?!\s+of\s+waystones?)|(?:item\s+)?quantity(?!\s+of\s+waystones?)[^%\d\n]{0,20}?(\d+)\s*%)/i,
   // Real PoE2 item text uses both "Item Rarity: +45%" (header) and
   // "+45% increased Rarity of Items found in this Area" (mod line) — accept
   // either "item rarity" or "rarity of items", but not when "monster"
