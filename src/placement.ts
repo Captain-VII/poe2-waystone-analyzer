@@ -5,11 +5,17 @@
 
 import type { EffectiveMode } from "./settings";
 import { saveCustomPosition } from "./settings";
+import { reportDiagnosticError } from "./diagnostics";
 
 const PANEL_BLEED = 12;
 
 /** §2 footprint. Full adds 16px clearance for its up-left micro-shift. */
 const FULL_FOOTPRINT = { w: 580 + 16, h: 332 + 16 };
+
+export interface ResolvedMonitor {
+  monitor: Awaited<ReturnType<typeof import("@tauri-apps/api/window").currentMonitor>>;
+  source: "current" | "primary" | "available" | "none";
+}
 
 /** Resolves the monitor to anchor/size against, falling back when
  *  `currentMonitor()` comes back null — which is exactly what happens right
@@ -21,11 +27,14 @@ const FULL_FOOTPRINT = { w: 580 + 16, h: 332 + 16 };
  *  (KNOWN_ISSUES.md #6's disconnected-screen case). Falls through
  *  current -> primary -> first available, so there's always a real monitor
  *  to re-anchor onto as long as at least one is connected. `source` is
- *  reported back so callers can log the degraded cases. */
-async function resolveMonitor(): Promise<{
-  monitor: Awaited<ReturnType<typeof import("@tauri-apps/api/window").currentMonitor>>;
-  source: "current" | "primary" | "available" | "none";
-}> {
+ *  reported back so callers can log the degraded cases.
+ *
+ *  Exported so a caller driving both `computeEffectiveMode()` and
+ *  `placeTopRight()` for the same event (a display change, or startup) can
+ *  resolve once and pass the result into both, instead of each of them
+ *  independently paying up to 3 Tauri IPC round-trips. */
+export async function resolveMonitor(): Promise<ResolvedMonitor> {
+  if (!("__TAURI_INTERNALS__" in window)) return { monitor: null, source: "none" };
   const { currentMonitor, primaryMonitor, availableMonitors } = await import("@tauri-apps/api/window");
   const current = await currentMonitor();
   if (current) return { monitor: current, source: "current" };
@@ -48,17 +57,21 @@ async function resolveMonitor(): Promise<{
 async function logMonitorFallback(source: "primary" | "available"): Promise<void> {
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("log_frontend_report", {
-    report: JSON.stringify({ tag: "monitor-fallback", source }, null, 2),
-  }).catch(() => {});
+    report: JSON.stringify({ tag: "monitor-fallback", source }),
+  }).catch((e) => reportDiagnosticError(`logMonitorFallback failed: ${e}`));
 }
 
 /** §2 fallback: Full fits (with micro-shift)? → Full. Else → Mini — the
  *  emergency fallback for screens too small for Full (Compact mode, the
- *  former middle rung, was removed). */
-export async function computeEffectiveMode(): Promise<EffectiveMode> {
+ *  former middle rung, was removed). Accepts an already-`resolveMonitor()`d
+ *  result so a caller also calling `placeTopRight()` for the same event
+ *  doesn't pay for a second resolution — see `resolveMonitor()`'s doc
+ *  comment. */
+export async function computeEffectiveMode(resolved?: ResolvedMonitor): Promise<EffectiveMode> {
   if (!("__TAURI_INTERNALS__" in window)) return "full"; // plain-browser dev
-  const { monitor: mon } = await resolveMonitor();
+  const { monitor: mon, source } = resolved ?? (await resolveMonitor());
   if (!mon) return "full";
+  if (source === "primary" || source === "available") void logMonitorFallback(source);
 
   const scale = mon.scaleFactor;
   const monW = mon.size.width / scale;
@@ -76,11 +89,14 @@ export async function computeEffectiveMode(): Promise<EffectiveMode> {
 // display change and doesn't re-trigger the display watch on itself.
 let repositioning = false;
 
-export async function placeTopRight(): Promise<void> {
+/** Accepts an already-`resolveMonitor()`d result so a caller also calling
+ *  `computeEffectiveMode()` for the same event doesn't pay for a second
+ *  resolution — see `resolveMonitor()`'s doc comment. */
+export async function placeTopRight(resolved?: ResolvedMonitor): Promise<void> {
   if (!("__TAURI_INTERNALS__" in window)) return; // plain-browser vite dev
   const { getCurrentWindow, LogicalPosition } = await import("@tauri-apps/api/window");
   const win = getCurrentWindow();
-  const { monitor: mon, source } = await resolveMonitor();
+  const { monitor: mon, source } = resolved ?? (await resolveMonitor());
   if (!mon) return;
   if (source === "primary" || source === "available") void logMonitorFallback(source);
 

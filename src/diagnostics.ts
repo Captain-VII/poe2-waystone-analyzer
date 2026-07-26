@@ -71,6 +71,13 @@ window.addEventListener("unhandledrejection", (e) => {
   capturedErrors.push(`unhandledrejection: ${e.reason}`);
 });
 
+/** Lets modules outside diagnostics.ts (e.g. placement.ts's monitor-fallback
+ *  logging) report a failed invoke() into the same errors list every report
+ *  in this file surfaces through, instead of swallowing it silently. */
+export function reportDiagnosticError(message: string): void {
+  capturedErrors.push(message);
+}
+
 export async function runDiagnostics(): Promise<{ debugOpaque: boolean }> {
   if (!("__TAURI_INTERNALS__" in window)) {
     console.log("[diag] not running under Tauri (plain browser) — skipping window/invoke checks");
@@ -83,7 +90,7 @@ export async function runDiagnostics(): Promise<{ debugOpaque: boolean }> {
   const title = await win.title();
 
   const report = await buildReport();
-  await invoke("log_frontend_report", { report: JSON.stringify(report, null, 2) }).catch((e) =>
+  await invoke("log_frontend_report", { report: JSON.stringify(report) }).catch((e) =>
     capturedErrors.push(`log_frontend_report failed: ${e}`),
   );
   await invoke("log_window_diagnostics").catch((e) => capturedErrors.push(`log_window_diagnostics failed: ${e}`));
@@ -154,7 +161,7 @@ export async function logAnalyzeAttempt(info: {
 }): Promise<void> {
   if (!("__TAURI_INTERNALS__" in window)) return;
   const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("log_frontend_report", { report: JSON.stringify({ tag: "analyze-attempt", ...info }, null, 2) }).catch(
+  await invoke("log_frontend_report", { report: JSON.stringify({ tag: "analyze-attempt", ...info }) }).catch(
     (e) => capturedErrors.push(`logAnalyzeAttempt failed: ${e}`),
   );
 }
@@ -166,7 +173,7 @@ export async function sendReport(tag: string): Promise<void> {
   const { invoke } = await import("@tauri-apps/api/core");
   const report = await buildReport();
   (report as Record<string, unknown>).tag = tag;
-  await invoke("log_frontend_report", { report: JSON.stringify(report, null, 2) }).catch((e) =>
+  await invoke("log_frontend_report", { report: JSON.stringify(report) }).catch((e) =>
     capturedErrors.push(`log_frontend_report(${tag}) failed: ${e}`),
   );
 }

@@ -25,13 +25,31 @@ const DEFAULT_META_JSON: &str = include_str!("../default-meta.json");
 /// hide()/show() cycle.
 const WINDOW_LOGICAL_SIZE: (f64, f64) = (620.0, 406.0);
 
+/// Managed as Tauri state wrapping the guard in `Option` so the tray "quit"
+/// handler can `.take()` and explicitly drop it — flushing the non-blocking
+/// writer — before `app.exit()`. `AppHandle::exit()` bottoms out in the
+/// window backend's event loop, which on every platform terminates the
+/// process directly (`-> !`, no unwind), so managed state's `Drop` never
+/// runs on its own; an explicit `.take()` + `drop()` is required for the
+/// last buffered lines (e.g. the "quit requested" line itself) to reach
+/// disk. `Manager::unmanage()` would do this too but is deprecated/unsafe
+/// upstream — `Mutex<Option<T>>` + `take()` is tauri's documented
+/// replacement.
+type LogGuard = Mutex<Option<tracing_appender::non_blocking::WorkerGuard>>;
+
 /// Structured logging (ROADMAP.md "Confort & diagnostic"): a daily-rotating
-/// file in the OS log dir, plus stdout under `tauri dev`. The returned guard
-/// must be kept alive (managed as Tauri state) — dropping it stops the
-/// background flush thread and buffered lines never reach disk. Uses
-/// `tracing_appender::non_blocking` specifically so file I/O never happens
-/// on the calling thread (the "must cost nothing on the hot path" rule from
-/// the roadmap item).
+/// file in the OS log dir, plus stdout under `tauri dev` only (release
+/// builds detach the console via `windows_subsystem = "windows"`, so a
+/// stdout layer there would just pay formatting/lock overhead for a sink
+/// nothing can read). Default level is `debug`, not `info` — the routine
+/// invocation/nudge/timing lines logged at `debug!` are exactly the
+/// evidence the black-screen investigation (KNOWN_ISSUES.md #1) needs, and
+/// nothing here documents or exposes a `RUST_LOG` override to end users, so
+/// `info` as a default would silently make this feature's whole diagnostic
+/// purpose invisible. `RUST_LOG` still overrides for a quieter local run.
+/// Uses `tracing_appender::non_blocking` specifically so file I/O never
+/// happens on the calling thread (the "must cost nothing on the hot path"
+/// rule from the roadmap item).
 fn init_logging(app: &tauri::AppHandle) -> tracing_appender::non_blocking::WorkerGuard {
     use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -43,10 +61,11 @@ fn init_logging(app: &tauri::AppHandle) -> tracing_appender::non_blocking::Worke
     let file_appender = tracing_appender::rolling::daily(&log_dir, "waystone-overlay.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
+    let stdout_layer = cfg!(debug_assertions).then(|| fmt::layer().with_writer(std::io::stdout));
     let _ = tracing_subscriber::registry()
         .with(filter)
-        .with(fmt::layer().with_writer(std::io::stdout))
+        .with(stdout_layer)
         .with(fmt::layer().with_writer(non_blocking).with_ansi(false))
         .try_init();
 
@@ -614,26 +633,22 @@ async fn log_window_diagnostics(window: tauri::WebviewWindow) -> Result<(), Stri
         "window diagnostics snapshot"
     );
 
-    let env_matrix: Vec<String> = [
-        "OVERLAY_DEBUG_OPAQUE",
-        "OVERLAY_TRANSPARENT",
-        "OVERLAY_DECORATIONS",
-        "OVERLAY_ALWAYS_ON_TOP",
-        "OVERLAY_SHADOW",
-        "OVERLAY_SKIP_TASKBAR",
-        "OVERLAY_CLICK_THROUGH",
-    ]
-    .into_iter()
-    .map(|key| {
-        format!(
-            "{key}={}",
-            env::var(key).unwrap_or_else(|_| "(unset)".into())
-        )
-    })
-    .collect();
+    // A fixed, known set of 7 vars (not a dynamic list) — spelled out as
+    // named fields rather than joined into one string, so each stays
+    // individually greppable in the exported log (`grep OVERLAY_SHADOW`),
+    // unlike a single comma-joined blob.
+    fn env_or_unset(key: &str) -> String {
+        env::var(key).unwrap_or_else(|_| "(unset)".into())
+    }
     tracing::info!(
         target: "window_diagnostics",
-        env_matrix = %env_matrix.join(", "),
+        overlay_debug_opaque = %env_or_unset("OVERLAY_DEBUG_OPAQUE"),
+        overlay_transparent = %env_or_unset("OVERLAY_TRANSPARENT"),
+        overlay_decorations = %env_or_unset("OVERLAY_DECORATIONS"),
+        overlay_always_on_top = %env_or_unset("OVERLAY_ALWAYS_ON_TOP"),
+        overlay_shadow = %env_or_unset("OVERLAY_SHADOW"),
+        overlay_skip_taskbar = %env_or_unset("OVERLAY_SKIP_TASKBAR"),
+        overlay_click_through = %env_or_unset("OVERLAY_CLICK_THROUGH"),
         "env matrix snapshot"
     );
     Ok(())
@@ -1011,7 +1026,7 @@ pub fn run() {
             is_debug_overlay
         ])
         .setup(|app| {
-            app.manage(init_logging(app.handle()));
+            app.manage(LogGuard::new(Some(init_logging(app.handle()))));
             seed_meta_json(app.handle());
             let hotkey_base = load_hotkey_base(app.handle());
             app.manage(HotkeyBase(Mutex::new(hotkey_base.clone())));
@@ -1170,6 +1185,12 @@ pub fn run() {
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "quit" => {
                         tracing::info!(target: "overlay", "quit requested from tray menu");
+                        // Flush the last buffered log lines before app.exit() —
+                        // see LogGuard's doc comment for why Drop alone can't be
+                        // relied on here.
+                        if let Some(guard) = app.state::<LogGuard>().lock().unwrap().take() {
+                            drop(guard);
+                        }
                         app.exit(0);
                     }
                     "show" => {

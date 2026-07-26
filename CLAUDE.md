@@ -325,6 +325,14 @@ Si tu dois expliquer quelque chose :
 
 5. **Toujours être bref.** Réponses courtes, droit au but, pas de pavés inutiles. Économiser les tokens.
 
+6. **Working rules for Claude Code in this repo**
+   - Read existing files before writing. Don't re-read unless changed.
+   - Write complete solutions, test once, no over-engineering.
+   - Thorough in reasoning, concise in output.
+   - Skip files over 100KB unless required.
+   - No sycophantic openers or closing fluff. No emojis or em-dashes.
+   - Do not guess APIs, versions, flags, commit SHAs, or package names — verify by reading code or docs before asserting.
+
 ---
 
 ## Quand quelque chose casse

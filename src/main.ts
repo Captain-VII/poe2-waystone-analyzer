@@ -8,6 +8,8 @@ import {
   startWindowDrag,
   restoreCustomPosition,
   watchWindowMoves,
+  resolveMonitor,
+  type ResolvedMonitor,
 } from "./placement";
 import {
   loadReduceEffects,
@@ -280,8 +282,8 @@ async function reportRegions(): Promise<void> {
 /** §2: re-evaluates the Full→Mini fallback against current monitor space
  *  and renders it — Full is always what's asked for, so a forced Mini
  *  fallback is automatically undone the next time space allows it. */
-async function applyEffectiveMode(): Promise<void> {
-  const effective = await computeEffectiveMode();
+async function applyEffectiveMode(resolved?: ResolvedMonitor): Promise<void> {
+  const effective = await computeEffectiveMode(resolved);
   overlay.setMode(effective);
   await reportRegions();
 }
@@ -423,8 +425,9 @@ async function handleDisplayChange(): Promise<void> {
     // rather than trying to preserve it (drag-to-reposition, see
     // placement.ts's restoreCustomPosition doc comment).
     clearCustomPosition();
-    await placeTopRight();
-    await applyEffectiveMode(); // also re-reports regions
+    const resolved = await resolveMonitor();
+    await placeTopRight(resolved);
+    await applyEffectiveMode(resolved); // also re-reports regions
     setTimeout(reportRegions, 260); // once more after any mode-morph settles
   } finally {
     handlingDisplayChange = false;
@@ -468,8 +471,9 @@ async function init(): Promise<void> {
   // visible jump on reveal either way.
   const customPos = loadCustomPosition();
   const restored = customPos ? await restoreCustomPosition(customPos) : false;
-  if (!restored) await placeTopRight();
-  await applyEffectiveMode(); // §2 fallback — may render Mini if Full doesn't fit
+  const resolved = await resolveMonitor();
+  if (!restored) await placeTopRight(resolved);
+  await applyEffectiveMode(resolved); // §2 fallback — may render Mini if Full doesn't fit
   await sendReport("post-placement");
   // Settings' "Start minimized" toggle: only skip the reveal when Rust
   // confirms this launch actually came from the Windows autostart entry
