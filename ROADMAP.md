@@ -171,9 +171,10 @@ Vrac à trier.
 - [ ] **Temps de démarrage** : profiler et vérifier si les données de
       tablettes sont reparsées à chaque `analyze()` ; si oui, mettre en
       cache après le premier parse.
-- [ ] **Mode debug** (`OVERLAY_DEBUG=1`) : un coin de l'overlay affichant
-      mods parsés / score / temps de rebuild, pour itérer sur les formules
-      sans redémarrer.
+- [x] **Mode debug** (`OVERLAY_DEBUG=1`) — livré 2026-07-26 : coin bas-gauche
+      affichant « N mods · score · durée » (parse + rendu), lu depuis Rust
+      (`is_debug_overlay`) puisque la variable d'env est invisible au
+      webview. Masqué et sans coût en build normal. Documenté dans le README.
 - [x] **Bouton « Valider meta.json »** — livré 2026-07-26 : re-lit le fichier
       sur disque et rapporte l'erreur JSON exacte avec ligne/colonne
       (`validateMetaFile`, meta-schema.ts), au lieu du fallback silencieux

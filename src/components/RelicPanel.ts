@@ -118,6 +118,11 @@ export interface OverlayHandle {
    *  session, so this must read clearly on its own, not piggyback the
    *  god-tier sparks. */
   flashSessionBest(): void;
+  /** `OVERLAY_DEBUG=1` only (Rust's is_debug_overlay): shows a small corner
+   *  readout of the last analysis — parsed mod count, score, and how long
+   *  the parse + render took — so score-formula work can be iterated on
+   *  without a restart or a log dive. Never rendered otherwise. */
+  setDebugInfo(info: { modCount: number; score: number; ms: number } | null): void;
   /** Shows the transient status chip naming why Ins produced nothing new —
    *  the failure counterpart of analyze()'s success pulse (which must NOT
    *  play alongside it, so the two outcomes stay unambiguous). */
@@ -513,6 +518,7 @@ export function mountOverlay(
             </div>
           </div>
         </div>
+        <div class="debug-hud" data-debug-hud hidden></div>
       </div>
     </div>`;
 
@@ -539,6 +545,7 @@ export function mountOverlay(
   const minimizeBtn = q("[data-minimize]");
   const settingsPanel = q("[data-settings-panel]");
   const settingsScroll = settingsPanel.querySelector(".settings-scroll") as HTMLElement;
+  const debugHud = q("[data-debug-hud]");
   const setInsightsInput = q("[data-set-insights]") as HTMLInputElement;
   const setReduceInput = q("[data-set-reduce]") as HTMLInputElement;
   const setAutostartInput = q("[data-set-autostart]") as HTMLInputElement;
@@ -834,6 +841,17 @@ export function mountOverlay(
   function flashSessionBest(): void {
     if (opts.isReduced()) return; // §10: color states stay, motion doesn't — same guard as analyze()
     retrigger(q(".halo"), "session-best-flash");
+  }
+
+  /** No-op until main.ts confirms OVERLAY_DEBUG=1 — the element stays
+   *  `hidden`, so a normal build renders nothing at all here. */
+  function setDebugInfo(info: { modCount: number; score: number; ms: number } | null): void {
+    if (!info) {
+      debugHud.hidden = true;
+      return;
+    }
+    debugHud.textContent = `${info.modCount} mods · ${info.score.toFixed(1)} · ${info.ms.toFixed(1)}ms`;
+    debugHud.hidden = false;
   }
 
   function analyze(): void {
@@ -1830,6 +1848,7 @@ export function mountOverlay(
     setMode,
     analyze,
     flashSessionBest,
+    setDebugInfo,
     showAnalyzeError,
     setHotkeyLabel,
     setAutostartChecked,

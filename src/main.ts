@@ -44,6 +44,9 @@ import type { AnalysisResult, TierClass } from "./types";
 
 let tier: TierClass = "god";
 let analyzing = false;
+/** OVERLAY_DEBUG=1, resolved once from Rust at init (the flag is a process
+ *  env var the webview can't read itself). Gates the debug corner. */
+let debugOverlay = false;
 let lastNotifiedName: string | null = null; // avoid re-notifying on repeat/no-op analyzes
 
 // Session stats (Settings panel): one score per waystone name, persisted —
@@ -237,11 +240,23 @@ async function analyze(simulateCopy = true): Promise<void> {
   if (!clip) {
     failure = "clipboard";
   } else {
+    // Spans parse + render, which is what the debug readout reports — the
+    // two together are the "did my formula change make this slow" number,
+    // and splitting them would mean timing setResult separately for a
+    // figure nobody reads independently.
+    const startedAt = performance.now();
     const result = analyzeWaystoneText(clip);
     if (!result) {
       failure = "not-waystone";
     } else {
       overlay.setResult(result);
+      if (debugOverlay) {
+        overlay.setDebugInfo({
+          modCount: result.waystone.modCount,
+          score: result.heat.score,
+          ms: performance.now() - startedAt,
+        });
+      }
       applied = { score: result.heat.score, tierClass: result.heat.tierClass, name: result.waystone.name };
       if (result.heat.tierClass === "god" && result.waystone.name !== lastNotifiedName) {
         lastNotifiedName = result.waystone.name;
@@ -334,6 +349,11 @@ async function init(): Promise<void> {
     await sendReport("debug-opaque-applied");
     await showWhenPainted(); // window starts hidden; reveal once compositor has a real frame
     return; // isolate step 1 — paint only, nothing else (no click-through, no hotkeys)
+  }
+
+  if ("__TAURI_INTERNALS__" in window) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    debugOverlay = await invoke<boolean>("is_debug_overlay").catch(() => false);
   }
 
   // Drag-to-reposition: restore a previously-dragged spot instead of the

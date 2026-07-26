@@ -510,6 +510,26 @@
   left: 2px;
 }
 
+/* OVERLAY_DEBUG=1 readout (RelicPanel's setDebugInfo). Pinned to the
+   panel's bottom-left, out of the way of the footer's analyze button, and
+   pointer-events:none so it can never intercept a click meant for the UI
+   underneath — it's a readout, never a control. */
+.debug-hud {
+  position: absolute;
+  left: 6px;
+  bottom: 4px;
+  z-index: 30;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: var(--gold-hi);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 3px;
+  padding: 1px 5px;
+  pointer-events: none;
+}
+.debug-hud[hidden] { display: none; }
+
 /* Settings' tab bar (RelicPanel's selectSettingsTab). Sits above
    .settings-scroll inside .body-settings, which is already a flex column —
    so the bar keeps its natural height and the scroll region takes the rest.

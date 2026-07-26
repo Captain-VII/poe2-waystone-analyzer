@@ -299,6 +299,13 @@ Runs the full app — Tauri window, Rust backend, hot reload. `npm run dev`
 starts the frontend alone in a browser at `localhost:5173`, useful for CSS
 work (it renders mock fixtures, since there's no clipboard bridge).
 
+Set `OVERLAY_DEBUG=1` to show a small corner readout of each analysis —
+parsed mod count, score, and parse+render time — for iterating on the
+scoring formulas without restarting or reading logs. Several other
+`OVERLAY_*` flags bisect window-creation behaviour while chasing the
+black-screen bug; they're listed in `src-tauri/src/lib.rs`'s `env_flag`
+call sites.
+
 ### Build and test
 
 ```bash

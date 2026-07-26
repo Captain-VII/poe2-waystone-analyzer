@@ -607,6 +607,15 @@ async fn log_window_diagnostics(window: tauri::WebviewWindow) -> Result<(), Stri
     Ok(())
 }
 
+/// `OVERLAY_DEBUG=1` turns on the frontend's debug corner (parsed mods,
+/// score, rebuild time — see RelicPanel's setDebugInfo). Read here rather
+/// than in JS because the flag is a process env var owned by whoever
+/// launched the app, which the webview has no access to.
+#[tauri::command]
+fn is_debug_overlay() -> bool {
+    env_flag("OVERLAY_DEBUG", false)
+}
+
 fn env_flag(key: &str, default: bool) -> bool {
     match env::var(key).as_deref() {
         Ok("0") => false,
@@ -964,7 +973,8 @@ pub fn run() {
             get_hotkey_base,
             set_hotkey_base,
             check_update_channel,
-            install_pending_update
+            install_pending_update,
+            is_debug_overlay
         ])
         .setup(|app| {
             seed_meta_json(app.handle());

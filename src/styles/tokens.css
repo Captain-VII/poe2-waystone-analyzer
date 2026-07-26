@@ -14,6 +14,7 @@
   --track: #2a2118;
   --serif: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --sans: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace; /* OVERLAY_DEBUG readout only */
 }
 
 * { box-sizing: border-box; }
