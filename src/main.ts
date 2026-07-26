@@ -38,6 +38,7 @@ import { buildEditorModel, buildMetaFile, type MechanicEdit, type MetaEditorMode
 import { notifyLegendaryWaystone, notifyUpdateAvailable } from "./notify";
 import { playJuicyChime } from "./sound";
 import { checkForUpdate, installUpdate } from "./updater";
+import { loadUpdateChannelBeta } from "./overlaySettings";
 import { shouldShowChangelog, markChangelogSeen } from "./changelog";
 import type { AnalysisResult, TierClass } from "./types";
 
@@ -174,7 +175,7 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
   // inside the real overlay; plain-browser dev keeps a display-only row.
   onSetHotkey: "__TAURI_INTERNALS__" in window ? setHotkeyBase : undefined,
   onSetAutostart: "__TAURI_INTERNALS__" in window ? setAutostartEnabled : undefined,
-  onCheckUpdate: "__TAURI_INTERNALS__" in window ? checkForUpdate : undefined,
+  onCheckUpdate: "__TAURI_INTERNALS__" in window ? () => checkForUpdate(loadUpdateChannelBeta()) : undefined,
   onInstallUpdate: "__TAURI_INTERNALS__" in window ? installUpdate : undefined,
   onDragStart: "__TAURI_INTERNALS__" in window ? startWindowDrag : undefined,
   onResetPosition: resetPosition,
@@ -405,7 +406,7 @@ async function init(): Promise<void> {
       overlay.showChangelog();
       markChangelogSeen(version);
     }
-    const info = await checkForUpdate();
+    const info = await checkForUpdate(loadUpdateChannelBeta());
     if (info) {
       overlay.setUpdateAvailable(info.version);
       await notifyUpdateAvailable(info.version);

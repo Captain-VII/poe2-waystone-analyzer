@@ -61,10 +61,14 @@ Vrac à trier.
       - exposer un réglage de backend graphique
         (`--angle-graphics-backend=d3d11` au lieu du d3d12 par défaut)
         pour que l'utilisateur teste selon son pilote.
-- [ ] **Canal beta opt-in** dans les Réglages, pour tester avant la
-      release publique. L'infrastructure existe déjà (tags `beta`,
-      [BETA_NOTES.md](BETA_NOTES.md), flux updater) — ce qui manque, c'est
-      le choix du canal côté app.
+- [x] **Canal beta opt-in** — livré 2026-07-26. A révélé un vrai bug latent :
+      il n'existait qu'un seul flux rolling (`updater`), rafraîchi sur
+      **chaque** tag — un tag beta aurait donc mis à jour tous les
+      utilisateurs stables. Corrigé en même temps : deux flux
+      (`updater-beta` sur chaque tag, `updater` seulement sur un tag sans
+      suffixe, release.yml), endpoint choisi à l'exécution côté Rust
+      (`check_update_channel`) et non plus figé dans tauri.conf.json, plus
+      l'interrupteur « Beta channel » dans les Réglages.
 - [x] Vérifié 2026-07-26 : `scripts/verify-adapter.mjs` inline déjà son
       SAMPLE (commentaire explicite dans le fichier), aucune dépendance à un
       checkout sibling v2 ni côté script ni côté CI. Rien à corriger.

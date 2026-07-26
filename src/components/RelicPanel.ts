@@ -18,6 +18,8 @@ import {
   saveOpacity,
   loadScale,
   saveScale,
+  loadUpdateChannelBeta,
+  saveUpdateChannelBeta,
 } from "../overlaySettings";
 import { DEFAULT_HOTKEY_BASE, hotkeyLabel, keyEventToBase } from "../hotkeys";
 import { parseChangelog } from "../changelog";
@@ -458,6 +460,10 @@ export function mountOverlay(
                 <span class="set-lab">Version</span>
                 <span class="set-val" data-app-version>—</span>
               </div>
+              <div class="set-row" title="Beta builds may be less stable. Switching takes effect on the next check, no restart needed">
+                <span class="set-lab">Beta channel</span>
+                <label class="set-switch"><input type="checkbox" data-update-channel-beta /><span class="set-switch-track"></span></label>
+              </div>
               <div class="set-row" title="Checks GitHub; installation only ever starts on click — never automatically">
                 <span class="set-lab">Update</span>
                 <span class="set-val set-update-msg" data-update-msg hidden></span>
@@ -521,6 +527,7 @@ export function mountOverlay(
   const setReduceInput = q("[data-set-reduce]") as HTMLInputElement;
   const setAutostartInput = q("[data-set-autostart]") as HTMLInputElement;
   const setStartMinimizedInput = q("[data-set-start-minimized]") as HTMLInputElement;
+  const setUpdateChannelBetaInput = q("[data-update-channel-beta]") as HTMLInputElement;
   const setOpacityInput = q("[data-set-opacity]") as HTMLInputElement;
   const setOpacityVal = q("[data-set-opacity-val]");
   const setScaleInput = q("[data-set-scale]") as HTMLInputElement;
@@ -1548,6 +1555,9 @@ export function mountOverlay(
   setStartMinimizedInput.addEventListener("change", () => {
     saveStartMinimized(setStartMinimizedInput.checked);
   });
+  setUpdateChannelBetaInput.addEventListener("change", () => {
+    saveUpdateChannelBeta(setUpdateChannelBetaInput.checked);
+  });
   if (opts.onSetAutostart) {
     const onSetAutostart = opts.onSetAutostart;
     setAutostartInput.addEventListener("change", () => {
@@ -1712,6 +1722,7 @@ export function mountOverlay(
   // ORs the OS prefers-reduced-motion query the user can't toggle here.
   setReduceInput.checked = loadReduceEffects();
   setStartMinimizedInput.checked = loadStartMinimized();
+  setUpdateChannelBetaInput.checked = loadUpdateChannelBeta();
   applyPinned(loadPinned());
   applyOpacity(loadOpacity());
   applyScale(loadScale());

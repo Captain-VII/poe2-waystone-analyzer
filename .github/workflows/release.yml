@@ -1,9 +1,13 @@
 # Tag-triggered release pipeline: push a `vX.Y.Z[-suffix]` tag and this
 # builds the signed NSIS installer, publishes the GitHub release (pre-release
-# when the version has a `-suffix`), and refreshes the rolling `updater`
-# release's latest.json — the fixed endpoint every installed app polls.
-# That rolling release exists because GitHub's /releases/latest ignores
-# pre-releases, which is all a beta program ever publishes.
+# when the version has a `-suffix`), and refreshes the rolling updater
+# feed(s) apps poll. Two rolling releases exist (`updater-beta` refreshed on
+# every tag, `updater` refreshed only on a plain non-suffixed tag) so the
+# Settings "Beta channel" toggle can opt a user into pre-releases without
+# ever pushing a beta build to a stable-channel install — see lib.rs's
+# STABLE/BETA_UPDATER_ENDPOINT. Rolling releases (rather than GitHub's
+# /releases/latest) exist because that endpoint ignores pre-releases, which
+# is all a beta program ever publishes.
 name: Release
 
 on:
@@ -76,13 +80,25 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
-      - name: Refresh rolling updater feed
+      - name: Refresh rolling updater feed(s)
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download "$GITHUB_REF_NAME" --pattern latest.json --dir "$RUNNER_TEMP"
-          gh release view updater >/dev/null 2>&1 || gh release create updater --prerelease \
-            --title "Updater feed (ne pas installer depuis ici)" \
-            --notes "Flux latest.json consommé par la mise à jour automatique intégrée. Installez l'application depuis les releases versionnées."
-          gh release upload updater "$RUNNER_TEMP/latest.json" --clobber
+
+          # Beta feed: every tag lands here, stable or not — betas are a
+          # superset of what a beta-channel opt-in user should see.
+          gh release view updater-beta >/dev/null 2>&1 || gh release create updater-beta --prerelease \
+            --title "Updater feed - beta channel (ne pas installer depuis ici)" \
+            --notes "Flux latest.json du canal beta (Réglages → Beta channel). Installez l'application depuis les releases versionnées."
+          gh release upload updater-beta "$RUNNER_TEMP/latest.json" --clobber
+
+          # Stable feed: only a plain, non-suffixed tag — a beta tag must
+          # never move a stable-channel install onto a beta build.
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            gh release view updater >/dev/null 2>&1 || gh release create updater --prerelease \
+              --title "Updater feed - stable channel (ne pas installer depuis ici)" \
+              --notes "Flux latest.json du canal stable. Installez l'application depuis les releases versionnées."
+            gh release upload updater "$RUNNER_TEMP/latest.json" --clobber
+          fi

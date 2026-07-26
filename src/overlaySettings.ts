@@ -7,6 +7,7 @@ const KEYS = {
   showInsights: "overlay.showInsights",
   opacity: "overlay.opacity",
   scale: "overlay.scale",
+  updateChannel: "overlay.updateChannel",
 } as const;
 
 export const OPACITY_MIN = 60;
@@ -52,4 +53,14 @@ export function loadScale(): number {
 
 export function saveScale(scale: number): void {
   localStorage.setItem(KEYS.scale, String(scale));
+}
+
+/** Opt-in beta channel (ROADMAP: "Canal beta opt-in"). Default off — a
+ *  fresh install always starts on the stable feed. */
+export function loadUpdateChannelBeta(): boolean {
+  return localStorage.getItem(KEYS.updateChannel) === "beta";
+}
+
+export function saveUpdateChannelBeta(beta: boolean): void {
+  localStorage.setItem(KEYS.updateChannel, beta ? "beta" : "stable");
 }
