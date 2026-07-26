@@ -237,6 +237,13 @@ export interface AnalysisLogEntry {
   name: string;
   score: number;
   tierLabel: string;
+  /** Set once the player answers the skip-mismatch prompt (main.ts): this
+   *  waystone was high-score + "Very Dangerous", and a DIFFERENT waystone
+   *  got analyzed within 45s of it — a proxy for "skipped this one".
+   *  Undefined = never asked (or player hasn't answered yet). Local-only,
+   *  no telemetry: helps calibrate danger thresholds against real
+   *  behavior instead of guides. */
+  skippedForDanger?: boolean;
 }
 
 const MAX_LOG_ENTRIES = 10;
@@ -274,6 +281,20 @@ function saveAnalysisLog(log: AnalysisLogEntry[]): void {
 /** Appends one entry and persists, returning the updated (capped) log. */
 export function recordAnalysisLog(log: AnalysisLogEntry[], entry: AnalysisLogEntry): AnalysisLogEntry[] {
   const updated = [...log, entry].slice(-MAX_LOG_ENTRIES);
+  saveAnalysisLog(updated);
+  return updated;
+}
+
+/** Attaches the skip-mismatch prompt's answer to its entry (matched by
+ *  `at`, set when the entry was recorded) and persists. A no-op if the
+ *  entry already scrolled out of the capped log (MAX_LOG_ENTRIES) by the
+ *  time the player answers — nothing to attach it to. */
+export function setAnalysisLogSkipFeedback(
+  log: AnalysisLogEntry[],
+  at: string,
+  skippedForDanger: boolean,
+): AnalysisLogEntry[] {
+  const updated = log.map((e) => (e.at === at ? { ...e, skippedForDanger } : e));
   saveAnalysisLog(updated);
   return updated;
 }

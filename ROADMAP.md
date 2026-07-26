@@ -103,10 +103,13 @@ Vrac à trier.
       ouvre `https://poe2.re/tablet` via `tauri-plugin-opener`. Lien simple
       uniquement (pas de deep-link possible, state React local côté
       poe2.re) — voir la note CHANGELOG "Unreleased".
-- [ ] **Retour utilisateur passif** : quand un skip contredit le score
-      (score élevé mais danger « Very Dangerous »), proposer discrètement
-      « tu as passé celle-là à cause du danger ? ». Sert à calibrer les
-      seuils avec du vrai comportement plutôt qu'avec des guides.
+- [x] **Retour utilisateur passif** — livré 2026-07-26 : détection par
+      proxy (aucune télémétrie côté jeu n'est possible) — un waystone
+      high-score + « Very Dangerous » suivi d'une analyse d'un AUTRE
+      waystone dans les 45s déclenche un prompt Oui/Non discret et
+      auto-dismiss (10s). Stocké localement dans le log de session
+      (`AnalysisLogEntry.skippedForDanger`), affiché dans Réglages →
+      Session — pas d'ajustement automatique des seuils pour l'instant.
 
 ### Accessibilité
 
@@ -143,16 +146,18 @@ Vrac à trier.
       **côté Rust avec `reqwest`**, au démarrage, jamais dans `analyze()` :
       KNOWN_ISSUES #2 a déjà rejeté la version inline pour CORS et pour le
       budget « Ins → réaction < 100 ms ».
-- [ ] **Étendre le schéma de confiance des tablettes aux mécaniques** :
-      `tablets.ts` a déjà `confidence: "high"/"medium"/"low"` et
-      `source: "wiki"/"poe2db"/"community"/"manual"` par entrée — rien
-      d'équivalent n'existe sur `MechanicDef` (mechanics.ts) pour tracer
-      d'où vient chaque `priorityStat`. Si ça se fait, réutiliser
-      exactement ce vocabulaire plutôt qu'en inventer un second à côté.
-      Permettrait un écran « Settings → Data Quality » listant ce qui est
-      sourcé vs deviné (Temple/Irradiated : 0 source, cf. l'item Atlas
-      Master ci-dessus) — à distinguer de la télémétrie ci-dessous : ceci
-      n'est que de la provenance statique, pas de la collecte runtime.
+- [x] **Étendre le schéma de confiance des tablettes aux mécaniques** —
+      livré 2026-07-26 : `MechanicDef` (mechanics.ts) a maintenant le même
+      `confidence`/`source` optionnel que `RawTabletDef` (tablets.ts),
+      informationnel uniquement (pas de logique de scoring qui en dépend).
+      Chaque entrée reflète sa sourcing existante en commentaire : Abyss/
+      Breach en `high` (deux sources communautaires indépendantes qui
+      convergent), Delirium/Expedition/Ritual en `medium` (consensus
+      communautaire simple), General/Irradiated/Temple en `low`/`manual`
+      (aucune source citée). meta.json ne peut pas overrider ces champs
+      (`applyOverride` ne les touche pas), même convention que
+      tablets.ts — pas d'écran "Data Quality" pour l'instant, juste la
+      donnée disponible pour un futur affichage.
 - [ ] **Télémétrie anonyme opt-in** : distribution des scores, tablettes
       retenues, mécaniques gagnantes. Le seul moyen de valider que le
       modèle de score colle au jeu réel plutôt qu'à des guides

@@ -31,6 +31,16 @@ export interface MechanicDef {
    *  this field), so the bundled wording always applies regardless of
    *  user config. */
   detect?: RegExp;
+  /** How solid the sourcing behind `priorityStat`/`secondaryStats` is —
+   *  same schema as tablets.ts's `RawTabletDef.confidence`/`source`
+   *  (§14): most entries here are cross-referenced community strat
+   *  guides (switchbladegaming/mobalytics/aoeah/etc.), never data-mined
+   *  game files like tablets.ts can be (there's no "priority stat" field
+   *  in the game's own data to mine — it's a judgment call by strat
+   *  writers, not a fact). Informational only today, same as tablets.ts —
+   *  available for future filtering/UI without another schema change. */
+  confidence?: "high" | "medium" | "low";
+  source?: "wiki" | "poe2db" | "community" | "manual";
 }
 
 /** 4-tier read of how strong a raw stat % is (2026-07-10, user's own
@@ -123,6 +133,8 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Delirium Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 40,
     detect: MECHANIC_PATTERNS.delirium,
+    confidence: "medium",
+    source: "community",
   },
   // Community consensus 0.5 (maxroll/aoeah/timesaver, 2026-07-06): logbook/
   // artifact quantity is the money stat, then runic/rare monster spawns;
@@ -134,6 +146,8 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Expedition Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 35,
     detect: MECHANIC_PATTERNS.expedition,
+    confidence: "medium",
+    source: "community",
   },
   // Reverted 2026-07-10 (same day, later): the 2026-07-10 packSize-priority
   // change above (Fubgun's Jado/Hilda strats) was contradicted by two
@@ -156,6 +170,11 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Abyss Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 30,
     detect: MECHANIC_PATTERNS.abyss,
+    // Two independent community sources converging, cross-checked against
+    // the Abyss Tablet's own real roll (tablets.ts) — a notch above the
+    // plain single-guide "community" entries below.
+    confidence: "high",
+    source: "community",
   },
   // Community consensus 0.5 (mobalytics/exile.codex/aoeah, 2026-07-06):
   // tribute scales with magic/rare monster count and pack density — item
@@ -167,6 +186,8 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Ritual Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 35,
     detect: MECHANIC_PATTERNS.ritual,
+    confidence: "medium",
+    source: "community",
   },
   // Fubgun 0.5 atlas strats (mobalytics, user-pasted tab text, 2026-07-10):
   // waystone line reads "you're looking for high item rarity and high
@@ -184,6 +205,10 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Breach Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 35,
     detect: MECHANIC_PATTERNS.breach,
+    // Two independent community sources converge (Fubgun's own tab text +
+    // an independent aoeah mirror) — same bar as Abyss above.
+    confidence: "high",
+    source: "community",
   },
   {
     name: "General",
@@ -191,6 +216,10 @@ export const MECHANICS: MechanicDef[] = [
     secondaryStats: ["monsterRarity", "packSize"],
     recommendedTablets: ["Overseer Precursor Tablet"],
     skipIfBelow: 30,
+    // Generic catch-all, not tied to any one strat guide's mechanic-
+    // specific numbers — hand-picked to be broadly reasonable.
+    confidence: "low",
+    source: "manual",
   },
   {
     name: "Irradiated",
@@ -199,6 +228,8 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Irradiated Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 30,
     detect: MECHANIC_PATTERNS.irradiated,
+    confidence: "low",
+    source: "manual",
   },
   {
     name: "Temple",
@@ -207,6 +238,8 @@ export const MECHANICS: MechanicDef[] = [
     recommendedTablets: ["Temple Tablet", "Overseer Precursor Tablet"],
     skipIfBelow: 30,
     detect: MECHANIC_PATTERNS.temple,
+    confidence: "low",
+    source: "manual",
   },
 ];
 

@@ -22,6 +22,7 @@ import {
   exportSessionHistoryCsv,
   loadAnalysisLog,
   recordAnalysisLog,
+  setAnalysisLogSkipFeedback,
   clearAnalysisLog,
   loadStartMinimized,
   loadPinned,
@@ -59,6 +60,12 @@ let lastNotifiedName: string | null = null; // avoid re-notifying on repeat/no-o
 // Raw item text of the last successful analysis — source for the header's
 // Share button (share.ts encodes this exact text, not a separate summary).
 let lastWaystoneText: string | null = null;
+// §13: the last successful analysis that was BOTH high-score and "Very
+// Dangerous" — if a DIFFERENT waystone gets analyzed within 45s, that's a
+// proxy for "skipped this one", and the overlay asks why. `at` doubles as
+// the analysisLog entry's key (setAnalysisLogSkipFeedback matches on it).
+let lastDangerousHit: { name: string; at: string } | null = null;
+const SKIP_MISMATCH_WINDOW_MS = 45_000;
 
 // Session stats (Settings panel): one score per waystone name, persisted —
 // see settings.ts's SessionStats for the dedupe/session semantics.
@@ -81,7 +88,7 @@ let analysisLog = loadAnalysisLog();
  *  before `sessionStats.scores` is mutated below), and only true once
  *  there's an actual prior best to beat — the very first analysis of a
  *  session is trivially "best" but that's not a meaningful signal. */
-function recordSessionStat(result: AnalysisResult): boolean {
+function recordSessionStat(result: AnalysisResult, at: string): boolean {
   const before = summarizeSessionStats(sessionStats);
   const isNewSessionBest = before.best !== null && result.heat.score > before.best.score;
 
@@ -89,7 +96,7 @@ function recordSessionStat(result: AnalysisResult): boolean {
   saveSessionStats(sessionStats);
   overlay.setSessionStats(summarizeSessionStats(sessionStats));
   analysisLog = recordAnalysisLog(analysisLog, {
-    at: new Date().toISOString(),
+    at,
     name: result.waystone.name,
     score: result.heat.score,
     tierLabel: result.heat.tierLabel,
@@ -314,7 +321,25 @@ async function analyze(simulateCopy = true): Promise<void> {
         void notifyLegendaryWaystone(result.waystone.name, result.heat.score);
         playJuicyChime();
       }
-      isNewSessionBest = recordSessionStat(result);
+      const at = new Date().toISOString();
+      // §13: fires BEFORE lastDangerousHit is overwritten below — a chain
+      // of 3+ analyses only ever asks about the immediately preceding one.
+      if (
+        lastDangerousHit &&
+        lastDangerousHit.name !== result.waystone.name &&
+        Date.now() - Date.parse(lastDangerousHit.at) <= SKIP_MISMATCH_WINDOW_MS
+      ) {
+        const hit = lastDangerousHit;
+        overlay.promptSkipFeedback(hit.name, (skippedForDanger) => {
+          analysisLog = setAnalysisLogSkipFeedback(analysisLog, hit.at, skippedForDanger);
+          overlay.setAnalysisLog(analysisLog);
+        });
+      }
+      lastDangerousHit =
+        result.dangerLevel === "high" && (result.heat.tierClass === "god" || result.heat.tierClass === "splus")
+          ? { name: result.waystone.name, at }
+          : null;
+      isNewSessionBest = recordSessionStat(result, at);
     }
   }
   // Support/debugging checkpoint: confirms whether Ins actually applied a

@@ -224,6 +224,45 @@
 }
 .status-chip.reveal { animation: warn-reveal-fade 0.25s ease; }
 
+/* Skip-mismatch prompt (§13, 2026-07-26): same floating position/z-index
+   as the status chip above it would occupy, but pointer-events: auto and
+   whole-panel click-through (see RelicPanel.ts's interactiveEls) since it
+   has two real buttons. Auto-dismissed after 10s if ignored. */
+.skip-feedback {
+  position: absolute;
+  top: -10px;
+  right: 0;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  padding: 4px 10px;
+  font: 600 11.5px var(--sans);
+  color: var(--ivory);
+  border-radius: 2px;
+  border-left: 2px solid var(--gold);
+  background: rgba(0, 0, 0, 0.7);
+  white-space: normal;
+}
+.skip-feedback[hidden] { display: none; }
+.skip-feedback-btn {
+  flex: none;
+  padding: 2px 8px;
+  font: 600 11px var(--sans);
+  color: var(--gold);
+  background: none;
+  border: 1px solid rgba(184, 135, 53, 0.4);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.skip-feedback-btn:hover {
+  color: var(--gold-hi);
+  border-color: var(--gold-hi);
+  background: rgba(240, 184, 74, 0.08);
+}
+.skip-feedback.reveal { animation: warn-reveal-fade 0.25s ease; }
+
 .mode-mini .badge { margin-left: auto; }
 
 .mode-mini .bodies { display: none; }

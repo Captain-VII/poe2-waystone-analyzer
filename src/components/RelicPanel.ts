@@ -174,6 +174,12 @@ export interface OverlayHandle {
   /** Settings' Session section — the current session's own recent analyses
    *  (distinct from setSessionHistory's archived-past-sessions list). */
   setAnalysisLog(log: AnalysisLogEntry[]): void;
+  /** main.ts calls this when a high-score + "Very Dangerous" waystone gets
+   *  followed by a DIFFERENT analysis within 45s (a proxy for "skipped
+   *  it") — shows a discreet, dismissible Yes/No prompt. `onAnswer` fires
+   *  once, only if the player picks Yes or No (auto-dismiss after 10s
+   *  calls nothing). */
+  promptSkipFeedback(waystoneName: string, onAnswer: (skippedForDanger: boolean) => void): void;
   /** Panel element, for click-through rect reporting. */
   panelEl: HTMLElement;
   /** Currently-visible interactive controls (§2: toggle / footer / mod-scroll
@@ -324,6 +330,11 @@ export function mountOverlay(
           <path d="M1 5.5 H7 M15 5.5 H21" stroke="currentColor" stroke-width="1" opacity=".7"/>
         </svg>
         <div class="status-chip" data-status hidden><span class="s-ic" data-status-icon></span><span data-status-text></span></div>
+        <div class="skip-feedback" data-skip-feedback hidden>
+          <span data-skip-feedback-text></span>
+          <button class="skip-feedback-btn" data-skip-yes type="button">Yes</button>
+          <button class="skip-feedback-btn" data-skip-no type="button">No</button>
+        </div>
         <div class="p-head" data-head title="Drag to move the overlay">
           <svg class="glyph" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M8 1 L14 8 L8 15 L2 8 Z" fill="none" stroke="currentColor" stroke-width="1.4"/>
@@ -557,6 +568,10 @@ export function mountOverlay(
   const shareBtn = q("[data-share]") as HTMLButtonElement;
   const pinBtn = q("[data-pin]") as HTMLButtonElement;
   const statusChip = q("[data-status]");
+  const skipFeedbackEl = q("[data-skip-feedback]");
+  const skipFeedbackTextEl = q("[data-skip-feedback-text]");
+  const skipYesBtn = q("[data-skip-yes]") as HTMLButtonElement;
+  const skipNoBtn = q("[data-skip-no]") as HTMLButtonElement;
   const footBtn = q("[data-foot]");
   const colTablets = q("[data-col-tablets]");
   const colInsights = q("[data-col-insights]");
@@ -946,6 +961,36 @@ export function mountOverlay(
     // shows one steady chip instead of flicker.
     clearTimeout(statusTimer);
     statusTimer = setTimeout(() => (statusChip.hidden = true), 2000);
+  }
+
+  let skipFeedbackOpen = false;
+  let skipFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function closeSkipFeedback(): void {
+    if (!skipFeedbackOpen) return;
+    skipFeedbackOpen = false;
+    skipFeedbackEl.hidden = true;
+    clearTimeout(skipFeedbackTimer);
+    opts.onInteractiveChange?.();
+  }
+
+  function promptSkipFeedback(waystoneName: string, onAnswer: (skippedForDanger: boolean) => void): void {
+    skipFeedbackOpen = true;
+    skipFeedbackTextEl.textContent = `Skipped "${waystoneName}" because of the danger?`;
+    skipFeedbackEl.hidden = false;
+    if (!opts.isReduced()) retrigger(skipFeedbackEl, "reveal");
+    skipYesBtn.onclick = () => {
+      onAnswer(true);
+      closeSkipFeedback();
+    };
+    skipNoBtn.onclick = () => {
+      onAnswer(false);
+      closeSkipFeedback();
+    };
+    opts.onInteractiveChange?.();
+    // Auto-dismiss if ignored — no answer recorded, same as never asking.
+    clearTimeout(skipFeedbackTimer);
+    skipFeedbackTimer = setTimeout(closeSkipFeedback, 10_000);
   }
 
   /** §10: mirrors the reduced-motion state onto a class, so CSS-only
@@ -1621,7 +1666,7 @@ export function mountOverlay(
       time.textContent = new Date(e.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
       const summary = document.createElement("span");
       summary.className = "set-history-summary";
-      summary.textContent = `${e.name} — ${e.score.toFixed(1)} ${e.tierLabel}`;
+      summary.textContent = `${e.name} — ${e.score.toFixed(1)} ${e.tierLabel}${e.skippedForDanger ? " · skipped: danger" : ""}`;
       summary.title = summary.textContent;
       row.append(time, summary);
       statLogEl.appendChild(row);
@@ -1682,6 +1727,10 @@ export function mountOverlay(
     // overflow past its small box (makeDropdown's clamping), so the whole
     // panel is reported rather than trying to track that overflow.
     if (openTabletMechanicPopup) return [...els, panel];
+    // Same whole-panel whitelist as the popup above — the prompt floats
+    // above the header, and reporting the exact rect isn't worth it for a
+    // rare, short-lived (10s auto-dismiss) Yes/No prompt.
+    if (skipFeedbackOpen) return [...els, panel];
     // footBtn: the click-to-analyze footer button. colTablets/colInsights:
     // either column can overflow-scroll on some DPI/font combos — without
     // reporting them here, a mouse-wheel over them falls through to the
@@ -1936,6 +1985,7 @@ export function mountOverlay(
     setSessionStats,
     setSessionHistory,
     setAnalysisLog,
+    promptSkipFeedback,
     panelEl: panel,
     interactiveEls,
   };
