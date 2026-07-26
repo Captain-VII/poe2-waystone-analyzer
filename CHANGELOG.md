@@ -7,6 +7,7 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+- **Keyboard navigation now works throughout.** Dropdowns can be walked with the arrow keys (Home/End jump to either end, Escape returns to the button), and several buttons that showed no focus outline now do.
 - **New: an opt-in Beta channel** in Settings — turn it on to get pre-release builds early, off (the default) to stay on stable. Takes effect on the next update check, no restart needed.
 - **Fixed: a beta release could update everyone.** The updater had a single feed that every tag refreshed, so a pre-release build would have been offered to stable installs too. Stable and beta now have separate feeds.
 - **New: hover any Heat Breakdown stat** for a one-line explanation of what it measures — the same wording as the in-app Guide.

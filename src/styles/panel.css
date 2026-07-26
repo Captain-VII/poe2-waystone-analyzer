@@ -608,6 +608,7 @@
 .set-btn:hover:not(:disabled) { color: var(--ivory); border-color: var(--gold-hi); }
 .set-btn:active:not(:disabled) { transform: scale(0.97); }
 .set-btn:disabled { color: var(--grey); cursor: not-allowed; opacity: 0.6; }
+.set-btn:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .set-btn-sm { padding: 3px 7px; }
 
 .set-sep {

@@ -108,8 +108,13 @@ Vrac à trier.
       daltonismes et la sensibilité à la lumière. C'est le point le plus
       concret de ce thème : l'app est dense et repose beaucoup sur la
       couleur pour distinguer les tiers.
-- [ ] **Navigation au clavier** complète (Tab entre les boutons, Entrée
-      pour valider). Escape ferme déjà l'overlay.
+- [x] **Navigation au clavier** — livré 2026-07-26. Vérifié : les 10
+      contrôles des Réglages sont atteignables au Tab et un panneau fermé ne
+      piège pas le focus. Ajouté : contour de focus sur `.set-btn`,
+      `.tmp-close` et le lien poe2.re (aucun n'en avait), et surtout la
+      traversée du dropdown custom (flèches/Home/End, focus qui entre dans la
+      liste à l'ouverture et revient au bouton après choix ou Escape) — il
+      s'ouvrait au clavier mais ne se parcourait pas.
 - [ ] Compléter les libellés pour lecteurs d'écran — il y en a déjà 12
       dans `RelicPanel.ts`, mais la couverture n'a jamais été auditée.
 

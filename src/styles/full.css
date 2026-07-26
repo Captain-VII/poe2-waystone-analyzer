@@ -346,6 +346,7 @@
   padding: 2px 4px;
 }
 .tmp-close:hover { color: var(--ivory); }
+.tmp-close:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
 /* `.set-select` is `flex: none` by default (panel.css) — fine in the wide
    Settings panel it was written for, but this popup is only 200px wide
@@ -376,6 +377,7 @@
   text-underline-offset: 2px;
 }
 .tmp-poe2re-link:hover { color: var(--ivory); }
+.tmp-poe2re-link:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
 /* ---- column 3: insights ---- */
 /* insights-block/.insights both stretch to fill the column's remaining

@@ -1060,6 +1060,7 @@ export function mountOverlay(
         item.addEventListener("click", () => {
           const changed = o.value !== value;
           close();
+          btn.focus(); // picking returns focus to the trigger, not to nowhere
           if (changed) {
             value = o.value;
             applyLabel();
@@ -1092,12 +1093,31 @@ export function mountOverlay(
         if (ev.key !== "Escape") return;
         ev.stopPropagation(); // must NOT reach hotkeys.ts's Escape-hides-overlay listener
         close();
+        btn.focus(); // Escape returns to where the keyboard user came from
+      };
+      // Arrow/Home/End move between options. Each option is a real <button>,
+      // so Enter/Space already pick one natively — only the traversal is
+      // missing, and without it a keyboard user can open this list but not
+      // walk it.
+      const onListKeydown = (ev: KeyboardEvent): void => {
+        const items = [...list.querySelectorAll<HTMLButtonElement>(".set-dropdown-item")];
+        const at = items.indexOf(document.activeElement as HTMLButtonElement);
+        const next =
+          ev.key === "ArrowDown" ? at + 1
+          : ev.key === "ArrowUp" ? at - 1
+          : ev.key === "Home" ? 0
+          : ev.key === "End" ? items.length - 1
+          : null;
+        if (next === null) return;
+        ev.preventDefault();
+        items[Math.min(items.length - 1, Math.max(0, next))]?.focus();
       };
       const onScroll = (): void => close(); // anchored position is stale once the container scrolls
       function close(): void {
         list.remove();
         document.removeEventListener("mousedown", onDocMousedown, true);
         window.removeEventListener("keydown", onEscape, true);
+        list.removeEventListener("keydown", onListKeydown);
         scrollHost?.removeEventListener("scroll", onScroll);
         openDropdownClose = null;
       }
@@ -1107,8 +1127,12 @@ export function mountOverlay(
       const scrollHost = container.querySelector(".settings-scroll");
       document.addEventListener("mousedown", onDocMousedown, true);
       window.addEventListener("keydown", onEscape, true);
+      list.addEventListener("keydown", onListKeydown);
       scrollHost?.addEventListener("scroll", onScroll);
       openDropdownClose = close;
+      // Land on the current value so arrows walk from there, not from the
+      // top — and so a keyboard open puts focus inside the list at all.
+      list.querySelector<HTMLButtonElement>(".set-dropdown-item.selected")?.focus();
     }
 
     btn.addEventListener("click", () => {
