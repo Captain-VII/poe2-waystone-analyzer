@@ -72,6 +72,23 @@ fn init_logging(app: &tauri::AppHandle) -> tracing_appender::non_blocking::Worke
     guard
 }
 
+/// Logs a panicking background thread via `tracing::error!` before falling
+/// through to Rust's default hook (still prints to stderr when a console is
+/// attached, e.g. `tauri dev`) — without this, a panic on any of this
+/// file's background threads (click-through poll, hotkey retry, nudge
+/// bursts) is completely invisible in a release build (`windows_subsystem
+/// = "windows"` has no console for the default hook's stderr) — silently
+/// killing that thread with zero trace even in the log file `init_logging`
+/// exists to populate. Must be called after `init_logging` so the panic
+/// message has somewhere to go.
+fn install_panic_hook() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        tracing::error!("panic: {info}");
+        default_hook(info);
+    }));
+}
+
 fn seed_meta_json(app: &tauri::AppHandle) {
     let Ok(dir) = app.path().app_config_dir() else {
         return;
@@ -1027,6 +1044,7 @@ pub fn run() {
         ])
         .setup(|app| {
             app.manage(LogGuard::new(Some(init_logging(app.handle()))));
+            install_panic_hook();
             seed_meta_json(app.handle());
             let hotkey_base = load_hotkey_base(app.handle());
             app.manage(HotkeyBase(Mutex::new(hotkey_base.clone())));
