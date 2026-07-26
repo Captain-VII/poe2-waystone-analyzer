@@ -25,8 +25,8 @@ hotkey remapping, and autostart are all functional.
   non-deterministic issue (see
   [KNOWN_ISSUES.md #1](KNOWN_ISSUES.md#1-overlay-occasionally-renders-black-or-invisible-unresolved)
   for the full technical writeup). If it happens: try moving the mouse off
-  and back onto the overlay, or toggling Compact/Full (**Shift+Ins**) — that
-  often forces a repaint. **This is the single most useful thing to report**:
+  and back onto the overlay — that often forces a repaint. **This is the
+  single most useful thing to report**:
   when it happened (right at launch? after a while?), and whether a
   mouse-move/toggle fixed it.
 - **Multi-monitor / mixed-DPI setups haven't been tested against real
