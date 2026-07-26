@@ -94,27 +94,11 @@ Vrac à trier.
       juste du parsing bidirectionnel.
 - [ ] **Tablettes favorites** : en épingler quelques-unes pour qu'elles
       restent visibles en haut de la liste même quand leur fit est faible.
-- [ ] **Lien vers poe2.re** (`github.com/veiset/poe2.re`, projet réel et
-      actif, 55 étoiles) sur les lignes tablettes/mécaniques — un simple
-      bouton/lien vers `https://poe2.re/tablet` (et `/waystone`), rien de
-      plus. Remplace l'idée initiale (générer nos propres regex et une
-      modale de recherche, ~9h estimées) après vérification du code source
-      réel de poe2.re, 2026-07-25 :
-      - ce n'est **pas** une recherche libre sur un site de trade — c'est un
-        générateur de chaînes pour la barre de recherche vendeur/inventaire
-        du jeu (matching de sous-chaîne réel, `Generated.Tablet.json` existe
-        déjà, tagué par mécanique) ;
-      - un vrai mapping vers l'API officielle du site de trade existe aussi
-        (`TabletTradeStatIds.json`, vrais `explicit.stat_XXXXXXX`), mais
-        c'est une intégration différente, plus lourde, pas celle imaginée ;
-      - **pas de fichier LICENSE dans le repo** — vendoriser/copier leurs
-        données générées n'est pas clairement autorisé ;
-      - leur page `/tablet` n'accepte aucun paramètre d'URL pour
-        présélectionner une mécanique (state React local uniquement) — pas
-        de lien profond possible aujourd'hui, seulement un lien simple.
-      - Reconstruire leur générateur dupliquerait un outil déjà maintenu,
-        sur des données qu'on ne peut pas copier — un lien suffit et crédite
-        l'outil existant.
+- [x] **Lien vers poe2.re** — livré 2026-07-26 : bouton "Search on poe2.re ↗"
+      dans le popup mécanique/tablette (`openTabletPopup`, RelicPanel.ts),
+      ouvre `https://poe2.re/tablet` via `tauri-plugin-opener`. Lien simple
+      uniquement (pas de deep-link possible, state React local côté
+      poe2.re) — voir la note CHANGELOG "Unreleased".
 - [ ] **Retour utilisateur passif** : quand un skip contredit le score
       (score élevé mais danger « Very Dangerous »), proposer discrètement
       « tu as passé celle-là à cause du danger ? ». Sert à calibrer les

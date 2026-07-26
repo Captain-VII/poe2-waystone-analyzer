@@ -19,6 +19,10 @@
     "updater:default",
     "process:allow-restart",
     {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://poe2.re/*" }]
+    },
+    {
       "identifier": "fs:allow-read-text-file",
       "allow": [{ "path": "$APPCONFIG/meta.json" }]
     },

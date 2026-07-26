@@ -5,6 +5,10 @@ utilisateur (pas de détails internes). La section la plus récente en premier.
 Ce fichier est embarqué dans l'app (panneau "Quoi de neuf" + Réglages) et
 sert de description à la release GitHub — écrire pour les joueurs.
 
+## Unreleased
+
+- **New: a "Search on poe2.re" link** in the tablet mechanic popup — jumps to poe2.re's tablet search page for the community's maintained trade-string generator, instead of us duplicating it.
+
 ## 0.4.0
 
 - **New: pin the overlay open.** The pin button in the header keeps it visible when you click elsewhere, instead of it slipping away mid-read.

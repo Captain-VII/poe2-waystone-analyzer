@@ -363,6 +363,20 @@
   max-width: none;
 }
 
+.tmp-poe2re-link {
+  align-self: flex-start;
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--gold-hi);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tmp-poe2re-link:hover { color: var(--ivory); }
+
 /* ---- column 3: insights ---- */
 /* insights-block/.insights both stretch to fill the column's remaining
    height below "Insights" (flex:1, same technique as col-heat's

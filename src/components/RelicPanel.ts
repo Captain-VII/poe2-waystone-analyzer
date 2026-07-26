@@ -10,6 +10,7 @@ import {
   savePinned,
 } from "../settings";
 import { renderDangerList } from "./DangerList";
+import { openExternal } from "../opener";
 import {
   loadShowInsights,
   saveShowInsights,
@@ -1229,7 +1230,8 @@ export function mountOverlay(
         <span class="set-lab">Skip if score below</span>
         <span class="set-val" data-tmp-skip-val></span>
       </div>
-      <input class="set-slider" type="range" min="0" max="100" step="1" data-tmp-skip aria-label="Skip threshold" />`;
+      <input class="set-slider" type="range" min="0" max="100" step="1" data-tmp-skip aria-label="Skip threshold" />
+      <button type="button" class="tmp-poe2re-link" data-tmp-poe2re>Search on poe2.re ↗</button>`;
     panel.appendChild(el);
 
     const priorityBtn = el.querySelector("[data-tmp-priority]") as HTMLButtonElement;
@@ -1320,6 +1322,11 @@ export function mountOverlay(
     document.addEventListener("mousedown", onDocMousedown, true);
     window.addEventListener("keydown", onEscape, true);
     closeBtn.addEventListener("click", () => closeTabletPopup());
+    const poe2reLink = el.querySelector("[data-tmp-poe2re]") as HTMLButtonElement;
+    // No deep-link into a specific mechanic exists on poe2.re (its /tablet
+    // page is React-local state, no URL params) — a plain link to the
+    // generic search page is all that's possible, see ROADMAP.md.
+    poe2reLink.addEventListener("click", () => openExternal("https://poe2.re/tablet"));
     skipInput.addEventListener("input", () => (skipVal.textContent = skipInput.value));
     skipInput.addEventListener("change", collectPopupEdit);
     tabletPopupCleanup = () => {
