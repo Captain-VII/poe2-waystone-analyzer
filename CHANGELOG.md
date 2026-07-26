@@ -7,6 +7,8 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 0.5.0
+
 - **New: the overlay can now ask if you skipped a dangerous waystone.** Analyze a high-scoring but "Very Dangerous" waystone, then a different one shortly after, and a discreet Yes/No prompt asks if the danger was why — purely local, helps tune future danger thresholds against real play instead of guides.
 - **New: share a waystone with a code.** The header's new share button copies a compact code for the analyzed waystone — paste it into Discord, and anyone else running the app can import it (Settings → Session → Import from clipboard) to see the exact same analysis.
 - **New: WCAG AA contrast pass on the danger/warning color** — brightened so warning text stays readable at a glance against every panel background.
