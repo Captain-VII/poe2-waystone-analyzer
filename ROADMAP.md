@@ -166,11 +166,12 @@ Vrac à trier.
       écran noir. Ne doit rien coûter au chemin chaud. (Pas Winston/Pino :
       ce sont des bibliothèques Node, inadaptées au côté Rust où le log
       doit vivre — `tracing` est l'équivalent de l'écosystème.)
-- [ ] **Surveillance de `meta.json`** : recharger automatiquement quand le
-      fichier change sur le disque. L'éditeur in-app recharge déjà à chaud
-      ce qu'il écrit (`meta-config.ts`) — ce qui manque, c'est le cas de
-      l'édition manuelle du fichier hors de l'app, qui exige encore un
-      redémarrage.
+- [x] **Surveillance de `meta.json`** — livré 2026-07-26 : `watchMetaFile`
+      (plugin-fs, feature `watch`, debounce 1s) recharge les tables quand le
+      fichier change hors de l'app, rafraîchit l'éditeur ouvert et journalise
+      le rechargement. Vérifié par une vraie édition externe du fichier.
+      Le résultat affiché n'est pas re-scoré — la prochaine analyse prend le
+      changement, exactement comme après une édition in-app.
 - [ ] **Temps de démarrage** : profiler et vérifier si les données de
       tablettes sont reparsées à chaque `analyze()` ; si oui, mettre en
       cache après le premier parse.

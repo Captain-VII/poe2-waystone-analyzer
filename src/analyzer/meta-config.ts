@@ -42,6 +42,33 @@ export async function loadMetaConfig(): Promise<void> {
   }
 }
 
+/** Watches meta.json for edits made OUTSIDE the app (a text editor, a
+ *  synced file) and re-activates the merged tables when one lands — the
+ *  in-app editor already hot-reloads its own writes via `saveMetaFile`,
+ *  so this covers the case that used to need a restart.
+ *
+ *  Debounced by the plugin (1s) because a save from most editors is a
+ *  write-truncate-rename burst, not one event. `onReloaded` lets the caller
+ *  refresh any open editor UI, which would otherwise still show the
+ *  pre-edit values. Returns a no-op unwatch outside Tauri, or if the watch
+ *  can't be established (missing file, denied permission) — a failure here
+ *  must never break startup, same contract as `loadMetaConfig`. */
+export async function watchMetaFile(onReloaded: () => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  try {
+    const { watch, BaseDirectory } = await import("@tauri-apps/plugin-fs");
+    return await watch(
+      "meta.json",
+      () => {
+        void loadMetaConfig().then(onReloaded);
+      },
+      { baseDir: BaseDirectory.AppConfig, delayMs: 1000 },
+    );
+  } catch {
+    return () => {};
+  }
+}
+
 /** Reads the raw file for the in-app editor. `corrupt` means the file
  *  exists but doesn't parse as a JSON object — the editor must warn that
  *  saving will rewrite it (hand-written content in a broken file can't be

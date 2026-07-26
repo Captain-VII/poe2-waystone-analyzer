@@ -125,6 +125,10 @@ export interface OverlayHandle {
    *  the parse + render took — so score-formula work can be iterated on
    *  without a restart or a log dive. Never rendered otherwise. */
   setDebugInfo(info: { modCount: number; score: number; ms: number } | null): void;
+  /** Re-reads meta.json into the Settings editor — called when the file
+   *  changed on disk outside the app (meta-config's watchMetaFile). Without
+   *  it, an open Meta tab would keep showing the pre-edit values. */
+  refreshMetaEditor(): void;
   /** Shows the transient status chip naming why Ins produced nothing new —
    *  the failure counterpart of analyze()'s success pulse (which must NOT
    *  play alongside it, so the two outcomes stay unambiguous). */
@@ -1885,6 +1889,7 @@ export function mountOverlay(
     analyze,
     flashSessionBest,
     setDebugInfo,
+    refreshMetaEditor: () => void loadMetaEditor(),
     showAnalyzeError,
     setHotkeyLabel,
     setAutostartChecked,

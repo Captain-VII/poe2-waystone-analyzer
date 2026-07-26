@@ -7,6 +7,7 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+- **Editing `meta.json` in a text editor no longer needs a restart** — the app notices the change and reloads your customizations on the spot. Your next analysis uses them.
 - **New: pin a tablet to the top of the list.** Click a tablet, turn on **Pin to top**, and it stays at the top with a ★ even on a waystone it fits poorly — handy when you're farming one mechanic.
 - **Settings is now four tabs instead of one long scroll**: **Overlay** (display and controls), **Session** (your per-session stats and history), **Meta** (per-mechanic customization) and **App** (startup, updates, version). Each opens where you left off, and startup options moved next to the other app-level settings.
 - **Keyboard navigation now works throughout.** Dropdowns can be walked with the arrow keys (Home/End jump to either end, Escape returns to the button), and several buttons that showed no focus outline now do.

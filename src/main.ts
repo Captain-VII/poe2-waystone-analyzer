@@ -33,7 +33,14 @@ import { reportInteractiveRegions } from "./interactive-rect";
 import { runDiagnostics, applyDebugOpaqueOverride, sendReport, showWhenPainted, logAnalyzeAttempt } from "./diagnostics";
 import { readClipboardText } from "./clipboard";
 import { analyzeWaystoneText } from "./analyzer/adapter";
-import { loadMetaConfig, readRawMetaFile, saveMetaFile, resetMetaFile, validateMetaFileOnDisk } from "./analyzer/meta-config";
+import {
+  loadMetaConfig,
+  readRawMetaFile,
+  saveMetaFile,
+  resetMetaFile,
+  validateMetaFileOnDisk,
+  watchMetaFile,
+} from "./analyzer/meta-config";
 import { buildEditorModel, buildMetaFile, type MechanicEdit, type MetaEditorModel } from "./analyzer/meta-schema";
 import { notifyLegendaryWaystone, notifyUpdateAvailable } from "./notify";
 import { playJuicyChime } from "./sound";
@@ -340,6 +347,19 @@ async function handleDisplayChange(): Promise<void> {
 
 async function init(): Promise<void> {
   await loadMetaConfig(); // §3: meta.json weights/tablets/thresholds before any analysis
+  // Hand-edits to meta.json outside the app used to need a restart; now the
+  // merged tables reload in place. The displayed result deliberately isn't
+  // re-scored — the next analysis picks the change up, exactly as it does
+  // after an in-app edit.
+  void watchMetaFile(() => {
+    overlay.refreshMetaEditor();
+    // Same compact one-line channel RelicPanel uses for autostart failures —
+    // an external reload is otherwise completely silent, which makes "did my
+    // hand-edit actually take?" unanswerable without a restart.
+    void import("@tauri-apps/api/core").then(({ invoke }) =>
+      invoke("log_frontend_report", { report: "[meta] meta.json changed on disk — tables reloaded" }),
+    );
+  });
   await sendReport("pre-placement");
 
   const { debugOpaque } = await runDiagnostics();

@@ -189,6 +189,12 @@ one mechanic. The editor writes only values that differ from the built-in
 defaults and preserves anything else you hand-wrote (custom tablets,
 `recommendedTablets`, unknown keys).
 
+Hand-edits made outside the app are picked up automatically — the file is
+watched, and a save reloads your customizations without a restart (the
+displayed result isn't re-scored; your next analysis uses them). **Meta →
+Validate meta.json** reports the exact parse error, with line and column,
+if a hand-edit breaks the JSON.
+
 Hand-editing remains the way to add custom tablets. Add an entry to the
 `"tablets"` array with its mods as plain PoE2-style text — the same tolerant
 parser used for waystones reads them, and the tablet is ranked against every

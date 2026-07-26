@@ -29,6 +29,14 @@
     {
       "identifier": "fs:allow-write-text-file",
       "allow": [{ "path": "$APPCONFIG/meta.json" }]
+    },
+    {
+      "identifier": "fs:allow-watch",
+      "allow": [{ "path": "$APPCONFIG/meta.json" }]
+    },
+    {
+      "identifier": "fs:allow-unwatch",
+      "allow": [{ "path": "$APPCONFIG/meta.json" }]
     }
   ]
 }
