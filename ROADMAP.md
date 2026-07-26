@@ -17,13 +17,14 @@ quand elle existe.
    vraie capture d'écran OS détecte maintenant un rendu noir automatiquement
    après chaque démarrage. **Toujours ouvert** — c'est un diagnostic, pas un
    correctif ; aucune action corrective n'y est câblée pour l'instant.
-3. **Comparaison de waystones** — la seule vraie fonctionnalité manquante
-   côté joueur, mais voir la réserve ci-dessous : elle a déjà été retirée
-   une fois.
+3. ✅ **Comparaison de waystones** — tranché 2026-07-25 : pas de rebuild du
+   mode Compare (retiré en 0.3.8, KNOWN_ISSUES #8). Remplacé par un flash
+   automatique et sans geste sur le halo du score quand l'analyse bat le
+   meilleur score de la session — livré (`flashSessionBest`, RelicPanel.ts).
 
-Ensuite, par ordre décroissant : journalisation structurée, tests de
-non-régression visuelle, historique enrichi, multi-écrans, profils de
-configuration.
+Ensuite, par ordre décroissant : canal beta, journalisation structurée,
+tests de non-régression visuelle, historique enrichi, multi-écrans,
+profils de configuration.
 
 ## Ensuite
 
@@ -69,15 +70,6 @@ Vrac à trier.
 
 ### Fonctionnalités joueur
 
-- [ ] **Comparer deux waystones** : en retenir un, analyser le suivant, et
-      afficher les deux côte à côte (score, danger, tablettes). Cas
-      d'usage : décider si on relance la waystone courante ou si on garde
-      la prochaine.
-      ⚠️ **À trancher avant de coder** : un mode Compare a existé et a été
-      **retiré en 0.3.8** (KNOWN_ISSUES #8, décision explicite). Il faut
-      savoir ce qui n'allait pas dans celui-là avant de le refaire.
-      Note pratique : **Shift+Ins est libre** depuis la suppression du mode
-      Compact (la touche est encore enregistrée mais ne fait plus rien).
 - [ ] **Historique enrichi** : au lieu d'une liste plate, une mini-timeline
       de la session avec les meilleures trouvailles colorées, et une
       sparkline du score moyen par heure pour voir si la session se
