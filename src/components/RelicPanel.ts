@@ -1729,7 +1729,7 @@ export function mountOverlay(
     // settings/guide-only zone the header used to report — the badge
     // is only interactive there in dev builds anyway (mock-tier cycling).
     const els = opts.onDragStart ? [headEl] : [settingsBtn, minimizeBtn, guideShowBtn];
-    if (!opts.onDragStart && opts.onCycleTier) els.push(badge);
+    if (!opts.onDragStart && opts.onCycleTier) els.push(badge, miniBadge);
     if (settingsOpen) return [...els, settingsPanel]; // whole panel as one rect
     if (changelogOpen) return [...els, changelogPanel]; // scroll + Fermer button
     if (guideOpen) return [...els, guidePanel]; // scroll + Close button
@@ -1754,9 +1754,16 @@ export function mountOverlay(
   footBtn.addEventListener("click", opts.onAnalyze);
   if (opts.onCycleTier) {
     const onCycleTier = opts.onCycleTier;
-    badge.classList.add("dev-clickable");
-    badge.title = "Cycle mock tier (dev)";
-    badge.addEventListener("click", onCycleTier);
+    // Wired on both: `.mode-full [data-badge] { display: none }` (panel.css)
+    // hides `badge` in Full mode — the only mode actually shipped — so
+    // `miniBadge` (Full's visible tier pill) is the one a real click ever
+    // lands on. `badge` stays wired too for Mini's own layout, where
+    // `miniBadge` isn't guaranteed visible.
+    for (const el of [badge, miniBadge]) {
+      el.classList.add("dev-clickable");
+      el.title = "Cycle mock tier (dev)";
+      el.addEventListener("click", onCycleTier);
+    }
   }
   settingsBtn.addEventListener("click", toggleSettings);
   minimizeBtn.addEventListener("click", opts.onHide);

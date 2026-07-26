@@ -16,6 +16,11 @@ src-tauri/gen/
 scripts/.adapter-bundle.mjs
 scripts/.meta-bundle.mjs
 
+# Playwright (visual regression) — report/results are regenerated per run;
+# snapshots under e2e/visual.spec.ts-snapshots/ ARE committed, not ignored.
+playwright-report/
+test-results/
+
 # OS junk
 .DS_Store
 Thumbs.db

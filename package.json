@@ -12,7 +12,9 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "verify-adapter": "esbuild src/analyzer/adapter.ts --bundle --platform=node --format=esm --outfile=scripts/.adapter-bundle.mjs && esbuild src/analyzer/meta-schema.ts --bundle --platform=node --format=esm --outfile=scripts/.meta-bundle.mjs && node scripts/verify-adapter.mjs"
+    "verify-adapter": "esbuild src/analyzer/adapter.ts --bundle --platform=node --format=esm --outfile=scripts/.adapter-bundle.mjs && esbuild src/analyzer/meta-schema.ts --bundle --platform=node --format=esm --outfile=scripts/.meta-bundle.mjs && node scripts/verify-adapter.mjs",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.0",
     "@tauri-apps/cli": "^2.5.0",
     "esbuild": "^0.25.12",
     "eslint": "^10.7.0",

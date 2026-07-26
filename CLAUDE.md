@@ -64,8 +64,9 @@ Avant de pousser, toujours lancer :
 
 ```bash
 # Frontend
-npm run test          # Jest unit tests
-npm run verify-adapter # Playwright E2E
+npm run test          # Vitest unit tests
+npm run verify-adapter # Formules/adapter (script Node, pas de navigateur)
+npm run test:visual   # Playwright, captures vs référence — voir note plus bas
 
 # Rust backend
 cargo test            # Tests unitaires Rust
@@ -74,6 +75,8 @@ cargo test            # Tests unitaires Rust
 cargo fmt --check     # Format Rust
 cargo clippy --all-targets -- -D warnings
 ```
+
+`npm run test:visual` télécharge Chromium (~150MB) au premier lancement et est plus lent que les deux autres checks front — **obligatoire si le push touche `src/components/RelicPanel.ts` ou `src/styles/*`** (les seuls fichiers qui peuvent bouger des pixels), optionnel sinon. Le CI (`visual-checks`) le lance de toute façon à chaque push, donc rien n'échappe au filet même si on saute le run local sur un changement sans rapport (scoring, Rust, docs).
 
 Si une check échoue, fixer localement, committer, re-tester, puis pousser.
 
@@ -153,10 +156,9 @@ On suit [Semantic Versioning](https://semver.org/) :
 ### .github/workflows/ci.yml
 
 Chaque push ou PR :
-- Lint Rust (`cargo fmt --check`, `cargo clippy -D warnings`)
-- Tests Rust (`cargo test`)
-- Tests frontend (`npm run test`)
-- Adapter verification (`npm run verify-adapter`)
+- `checks` (ubuntu-latest) : lint, tests frontend (`npm run test`), build, adapter verification (`npm run verify-adapter`)
+- `rust-checks` (windows-latest) : `cargo check`/`test`/`fmt --check`/`clippy -D warnings`
+- `visual-checks` (windows-latest) : captures Playwright vs référence (`npm run test:visual`) — job séparé, tourne sur Windows (pas Linux) à cause des polices système du projet (Segoe UI, Palatino Linotype, Cascadia Mono)
 
 Si l'une de ces checks échoue, le CI rouge et refuse le merge.
 
@@ -317,6 +319,7 @@ Si tu dois expliquer quelque chose :
    cargo test && npm run test && npm run verify-adapter
    cargo fmt --check && cargo clippy --all-targets -- -D warnings
    ```
+   `npm run test:visual` en plus si le push touche `RelicPanel.ts`/`src/styles/*` (voir plus haut).
    Si tu oublies, CI te le fera remarquer, mais c'est lent. Mieux d'avoir un feedback local immédiat.
 
 4. **Version bump = 3 fichiers en sync**

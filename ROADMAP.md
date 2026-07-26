@@ -57,11 +57,24 @@ Vrac à trier.
 - [ ] **Tests E2E** du chemin complet : coller un vrai texte de waystone,
       vérifier le parsing et le score exact. `verify-adapter.mjs` couvre
       déjà les formules, mais rien ne teste la chaîne presse-papier →
-      affichage. Playwright plutôt que des passes manuelles.
-- [ ] **Tests de non-régression visuelle** : rendre l'overlay avec des
-      fixtures et comparer le HTML/les captures à une référence, pour
-      attraper les décalages de mise en page (badge, alignement des
-      colonnes) que les tests de formules ne voient pas.
+      affichage. Playwright plutôt que des passes manuelles — l'infra
+      (`playwright.config.ts`, dossier `e2e/`) existe déjà depuis les tests
+      de non-régression visuelle ci-dessous, reste à écrire ce scénario.
+- [x] **Tests de non-régression visuelle** — livré 2026-07-27 :
+      `playwright.config.ts` + `e2e/visual.spec.ts`, 8 captures de référence
+      (5 fixtures de `mock.ts` via le cycle dev existant, 3 onglets
+      Settings) comparées à chaque run (`npm run test:visual`), job CI
+      séparé `visual-checks` sur `windows-latest` (pas `ubuntu-latest`
+      comme `checks` : les polices système du projet — Segoe UI, Palatino
+      Linotype, Cascadia Mono — n'existent pas sur Linux et fausseraient
+      les diffs). A révélé un vrai bug latent au passage : le bouton dev
+      "cycle mock tier" était câblé sur `[data-badge]`, cassé par
+      `.mode-full [data-badge] { display: none }` — Full étant le seul
+      mode réellement utilisé, ce raccourci dev ne marchait plus du tout ;
+      corrigé en câblant aussi `[data-minibadge]` (RelicPanel.ts). Onglet
+      "Meta" volontairement absent de la suite : il n'existe qu'en vrai
+      Tauri (accès au système de fichiers pour meta.json), jamais en
+      plain-browser dev.
 - [ ] Bug écran noir (KNOWN_ISSUES #1) — la capture OS réelle existe
       maintenant (`capture_window_is_blank`, 2026-07-25) et journalise un
       vrai verdict après chaque démarrage, mais **rien ne réagit encore à
