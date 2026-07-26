@@ -187,7 +187,7 @@ export const DEFAULT_TABLETS: RawTabletDef[] = [
     confidence: "high",
     source: "poe2db",
     rewards: [
-      { type: "mechanic", id: "ritual", value: 6 },
+      { type: "mechanic", id: "ritual", value: 5 }, // matches rewards.ts's MECHANIC_VALUES.ritual, the actual value used (see its own doc comment)
       { type: "currency", id: "tribute", weight: 2 },
     ],
   },
@@ -209,7 +209,7 @@ export const DEFAULT_TABLETS: RawTabletDef[] = [
     confidence: "high",
     source: "poe2db",
     rewards: [
-      { type: "mechanic", id: "delirium", value: 9 },
+      { type: "mechanic", id: "delirium", value: 10 }, // matches rewards.ts's MECHANIC_VALUES.delirium, the actual value used (see its own doc comment)
       { type: "currency", id: "simulacrum_splinter", weight: 3 },
     ],
   },
@@ -233,7 +233,7 @@ export const DEFAULT_TABLETS: RawTabletDef[] = [
     confidence: "high",
     source: "poe2db",
     rewards: [
-      { type: "mechanic", id: "expedition", value: 8 },
+      { type: "mechanic", id: "expedition", value: 5 }, // matches rewards.ts's MECHANIC_VALUES.expedition, the actual value used (see its own doc comment)
       { type: "currency", id: "logbook", weight: 2 },
     ],
   },
