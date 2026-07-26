@@ -624,7 +624,12 @@ async fn log_window_diagnostics(window: tauri::WebviewWindow) -> Result<(), Stri
         "OVERLAY_CLICK_THROUGH",
     ]
     .into_iter()
-    .map(|key| format!("{key}={}", env::var(key).unwrap_or_else(|_| "(unset)".into())))
+    .map(|key| {
+        format!(
+            "{key}={}",
+            env::var(key).unwrap_or_else(|_| "(unset)".into())
+        )
+    })
     .collect();
     tracing::info!(
         target: "window_diagnostics",
