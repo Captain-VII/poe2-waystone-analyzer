@@ -14,6 +14,22 @@
 
 ---
 
+## Dev local vs. Release — bien distinguer
+
+| | **Dev local** | **Release** |
+|---|---|---|
+| Commande | `npm run tauri dev` | tag Git (`git tag vX.Y.Z`) |
+| Où ça tourne | ta machine, fenêtre debug | machine de l'utilisateur final |
+| Build | non signé, non optimisé | signé, optimisé, via CI |
+| Déclencheur | manuel, à volonté | push d'un tag uniquement |
+| meta.json | `$APPCONFIG` local (dev) | `$APPCONFIG` de l'utilisateur |
+| Update checker | ne fait rien (pas de release à checker) | actif, checke `updater`/`updater-beta` |
+| `OVERLAY_DEBUG=1` | dispo (HUD debug) | jamais activé |
+
+**Règle simple** : tant que tu n'as pas poussé un tag, rien n'atteint les utilisateurs. Coder/tester en local ne touche jamais la release. Seul `git push origin vX.Y.Z` déclenche un vrai build public.
+
+---
+
 ## Workflow quotidien
 
 ### Branching & Commits
