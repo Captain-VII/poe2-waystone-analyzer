@@ -66,9 +66,6 @@ Vrac à trier.
       le choix du canal côté app.
 - [ ] Vérifier que `scripts/verify-adapter.mjs` n'a plus de dépendance à un
       checkout sibling v2 (fragilité CI potentielle relevée le 2026-07-11).
-- [ ] Passer `actions/checkout` et `actions/setup-node` en v5 — les v4
-      ciblent Node 20, déprécié sur les runners GitHub (avertissement au
-      build v0.4.0).
 
 ### Fonctionnalités joueur
 
