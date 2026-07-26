@@ -89,8 +89,11 @@ Vrac à trier.
 - [ ] **Partage de waystone** : encoder l'analyse en chaîne compacte à
       coller dans Discord, décodable par une autre instance. Zéro serveur,
       juste du parsing bidirectionnel.
-- [ ] **Tablettes favorites** : en épingler quelques-unes pour qu'elles
-      restent visibles en haut de la liste même quand leur fit est faible.
+- [x] **Tablettes favorites** — livré 2026-07-26 : « Pin to top » dans le
+      popup d'une tablette la remonte en tête de la liste quel que soit son
+      fit, avec une ★ sur la ligne. Épinglage par nom (survit à un ajout/
+      retrait de tablette via meta.json) et ordre relatif préservé dans
+      chaque groupe.
 - [x] **Lien vers poe2.re** — livré 2026-07-26 : bouton "Search on poe2.re ↗"
       dans le popup mécanique/tablette (`openTabletPopup`, RelicPanel.ts),
       ouvre `https://poe2.re/tablet` via `tauri-plugin-opener`. Lien simple

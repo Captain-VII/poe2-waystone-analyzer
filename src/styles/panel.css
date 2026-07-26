@@ -381,6 +381,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Pin marker on a favourited tablet (RelicPanel's pinnedTablets). `flex:
+   none` so it never steals width from .t-name's ellipsis, and it sits
+   between the name and the fit percentage — reading as "why is this row up
+   here" right where the eye already lands. */
+.trow .t-pin {
+  flex: none;
+  font-size: 8px;
+  line-height: 1;
+  color: var(--gold-hi);
+}
+
 /* Fit percentage, colored on a continuous red→gold ramp — replaces the
    earlier RUN/WHY NOT/DON'T RUN label (2026-07-12, user request): the
    list is now a fixed alphabetical order (not sorted by fit), so a

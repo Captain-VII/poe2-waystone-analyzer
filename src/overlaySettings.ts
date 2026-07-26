@@ -9,6 +9,7 @@ const KEYS = {
   scale: "overlay.scale",
   updateChannel: "overlay.updateChannel",
   settingsTab: "overlay.settingsTab",
+  pinnedTablets: "overlay.pinnedTablets",
 } as const;
 
 export const OPACITY_MIN = 60;
@@ -76,4 +77,25 @@ export function loadSettingsTab(): string {
 
 export function saveSettingsTab(name: string): void {
   localStorage.setItem(KEYS.settingsTab, name);
+}
+
+/** Tablet names the user pinned to the top of the Recommended Tablets list,
+ *  so a favourite stays visible even on a waystone it fits poorly. Names
+ *  (not indexes) so the list survives meta.json adding/removing tablets;
+ *  a pinned name that no longer exists simply never matches. Tolerates a
+ *  corrupted/hand-edited value the same way loadClamped does — a bad parse
+ *  means "nothing pinned", never a crash on a hot path. */
+export function loadPinnedTablets(): string[] {
+  const raw = localStorage.getItem(KEYS.pinnedTablets);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePinnedTablets(names: string[]): void {
+  localStorage.setItem(KEYS.pinnedTablets, JSON.stringify(names));
 }

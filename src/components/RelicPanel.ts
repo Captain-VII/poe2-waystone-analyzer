@@ -22,6 +22,8 @@ import {
   saveUpdateChannelBeta,
   loadSettingsTab,
   saveSettingsTab,
+  loadPinnedTablets,
+  savePinnedTablets,
 } from "../overlaySettings";
 import { DEFAULT_HOTKEY_BASE, hotkeyLabel, keyEventToBase } from "../hotkeys";
 import { parseChangelog } from "../changelog";
@@ -593,6 +595,18 @@ export function mountOverlay(
   let current = initial;
   let effective: EffectiveMode = "full";
   let settingsOpen = false;
+  let pinnedTablets = loadPinnedTablets();
+
+  /** Toggles a tablet's pin and re-renders from the current result, so the
+   *  row jumps to (or leaves) the top immediately rather than waiting for
+   *  the next analysis. */
+  function toggleTabletPin(name: string): void {
+    pinnedTablets = pinnedTablets.includes(name)
+      ? pinnedTablets.filter((n) => n !== name)
+      : [...pinnedTablets, name];
+    savePinnedTablets(pinnedTablets);
+    setResult(current);
+  }
 
   /** Header's copy-summary button — one line, ready to paste into a party
    *  chat/Discord. "Best" mirrors what's actually on top of the Recommended
@@ -665,11 +679,15 @@ export function mountOverlay(
       // Multi-line native tooltip: the opaque "matches X (Y/100)" reason,
       // then one line per breakdown row — every row gets this on hover.
       const title = [t.reason, ...(t.breakdown ?? []).map(formatBreakdownRow)].join("\n");
-      // data-mechanic drives the click-to-edit popup (openTabletPopup).
+      // data-mechanic drives the click-to-edit popup (openTabletPopup);
+      // data-tablet identifies the row for pinning (pinnedTablets), which
+      // is per-tablet rather than per-mechanic.
+      const pinned = pinnedTablets.includes(t.name);
       return `
-        <div class="trow" data-mechanic="${esc(t.mechanic)}" title="${esc(title)}">
+        <div class="trow${pinned ? " pinned" : ""}" data-mechanic="${esc(t.mechanic)}" data-tablet="${esc(t.name)}" title="${esc(title)}">
           <span class="t-ic">${icon}</span>
           <span class="t-name" title="${esc(t.name)}">${esc(shortName)}</span>
+          ${pinned ? '<span class="t-pin" title="Pinned to the top of this list">★</span>' : ""}
           <span class="t-fit" style="color: ${fitColor(t.fit)}">${t.fit}%</span>
         </div>`;
     };
@@ -687,7 +705,15 @@ export function mountOverlay(
     // "General" for the same reason, see adapter.ts).
     const mainTablets = result.tablets.filter((t) => !NON_ENCOUNTER_MECHANICS.has(t.mechanic));
     const asideTablets = result.tablets.filter((t) => NON_ENCOUNTER_MECHANICS.has(t.mechanic));
-    tabletsFullEl.innerHTML = mainTablets.map(tabletRow).join("");
+    // Pinned favourites float to the top whatever their fit — the whole
+    // point being to keep a tablet you're farming visible on a waystone it
+    // suits poorly. Stable within each group, so the ranking rankTablets
+    // produced still decides the order among pinned and among unpinned.
+    const pinnedFirst = [
+      ...mainTablets.filter((t) => pinnedTablets.includes(t.name)),
+      ...mainTablets.filter((t) => !pinnedTablets.includes(t.name)),
+    ];
+    tabletsFullEl.innerHTML = pinnedFirst.map(tabletRow).join("");
     // Same "dl-group-h" small-caps label style as Insights' MEDIUM/BONUS
     // group headers (DangerList.ts) — gives the aside box the same visual
     // grammar as the rest of the panel instead of an unlabeled orphan box
@@ -1333,7 +1359,7 @@ export function mountOverlay(
     opts.onInteractiveChange?.();
   }
 
-  function openTabletPopup(mechanicName: string, anchorRow: HTMLElement): void {
+  function openTabletPopup(mechanicName: string, tabletName: string, anchorRow: HTMLElement): void {
     if (openTabletMechanicPopup === mechanicName) {
       closeTabletPopup(); // re-clicking the same row toggles it shut
       return;
@@ -1360,6 +1386,10 @@ export function mountOverlay(
         <span class="set-val" data-tmp-skip-val></span>
       </div>
       <input class="set-slider" type="range" min="0" max="100" step="1" data-tmp-skip aria-label="Skip threshold" />
+      <div class="set-row" title="Keeps this tablet at the top of the list even on a waystone it fits poorly">
+        <span class="set-lab">Pin to top</span>
+        <label class="set-switch"><input type="checkbox" data-tmp-pin${pinnedTablets.includes(tabletName) ? " checked" : ""} /><span class="set-switch-track"></span></label>
+      </div>
       <button type="button" class="tmp-poe2re-link" data-tmp-poe2re>Search on poe2.re ↗</button>`;
     panel.appendChild(el);
 
@@ -1456,6 +1486,11 @@ export function mountOverlay(
     // page is React-local state, no URL params) — a plain link to the
     // generic search page is all that's possible, see ROADMAP.md.
     poe2reLink.addEventListener("click", () => openExternal("https://poe2.re/tablet"));
+    // toggleTabletPin re-renders the tablet list, and setResult closes this
+    // popup (its anchor row is about to be replaced) — so no field refresh
+    // is needed here, the popup is simply gone by the time this returns.
+    const pinInput = el.querySelector("[data-tmp-pin]") as HTMLInputElement;
+    pinInput.addEventListener("change", () => toggleTabletPin(tabletName));
     skipInput.addEventListener("input", () => (skipVal.textContent = skipInput.value));
     skipInput.addEventListener("change", collectPopupEdit);
     tabletPopupCleanup = () => {
@@ -1783,7 +1818,8 @@ export function mountOverlay(
       const row = (ev.target as HTMLElement).closest<HTMLElement>(".trow[data-mechanic]");
       if (!row) return;
       const mechanic = row.dataset.mechanic;
-      if (mechanic) openTabletPopup(mechanic, row);
+      const tablet = row.dataset.tablet;
+      if (mechanic && tablet) openTabletPopup(mechanic, tablet, row);
     });
     void loadMetaEditor(); // loaded once eagerly so a tablet click doesn't need its own fetch/loading state
   } else {
