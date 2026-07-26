@@ -20,6 +20,8 @@ import {
   saveScale,
   loadUpdateChannelBeta,
   saveUpdateChannelBeta,
+  loadSettingsTab,
+  saveSettingsTab,
 } from "../overlaySettings";
 import { DEFAULT_HOTKEY_BASE, hotkeyLabel, keyEventToBase } from "../hotkeys";
 import { parseChangelog } from "../changelog";
@@ -346,136 +348,149 @@ export function mountOverlay(
             <button class="p-foot" data-foot><kbd data-foot-kbd>Ins</kbd> Analyze Waystone</button>
           </div>
           <div class="body body-settings" data-settings-panel>
+            <div class="set-tabs" role="tablist" aria-label="Settings sections">
+              <button class="set-tab" type="button" role="tab" data-set-tab="overlay">Overlay</button>
+              <button class="set-tab" type="button" role="tab" data-set-tab="session">Session</button>
+              <button class="set-tab" type="button" role="tab" data-set-tab="meta">Meta</button>
+              <button class="set-tab" type="button" role="tab" data-set-tab="app">App</button>
+            </div>
             <div class="settings-scroll">
-              <div class="sec-h">Display</div>
-              <div class="set-row">
-                <span class="set-lab">Insights</span>
-                <label class="set-switch">
-                  <input type="checkbox" data-set-insights />
-                  <span class="set-switch-track"></span>
-                </label>
-              </div>
-              <div class="set-row" title="Disables pulse, flare, sparks and transition animations (§10)">
-                <span class="set-lab">Reduce Effects</span>
-                <label class="set-switch">
-                  <input type="checkbox" data-set-reduce />
-                  <span class="set-switch-track"></span>
-                </label>
-              </div>
-              <div class="set-row set-col">
+              <div class="set-tabpanel" role="tabpanel" data-set-tabpanel="overlay">
+                <div class="sec-h">Display</div>
                 <div class="set-row">
-                  <span class="set-lab">Overlay Opacity</span>
-                  <span class="set-val" data-set-opacity-val></span>
+                  <span class="set-lab">Insights</span>
+                  <label class="set-switch">
+                    <input type="checkbox" data-set-insights />
+                    <span class="set-switch-track"></span>
+                  </label>
                 </div>
-                <input class="set-slider" type="range" min="60" max="100" step="1" data-set-opacity />
-              </div>
-              <div class="set-row set-col">
-                <div class="set-row">
-                  <span class="set-lab">Overlay Scale</span>
-                  <span class="set-val" data-set-scale-val></span>
+                <div class="set-row" title="Disables pulse, flare, sparks and transition animations (§10)">
+                  <span class="set-lab">Reduce Effects</span>
+                  <label class="set-switch">
+                    <input type="checkbox" data-set-reduce />
+                    <span class="set-switch-track"></span>
+                  </label>
                 </div>
-                <input class="set-slider" type="range" min="0.8" max="1.05" step="0.05" data-set-scale />
-              </div>
-              <div class="set-sep"></div>
-              <div class="sec-h">Controls</div>
-              <div class="set-row" title="Click, then press the new key (Escape cancels). Ctrl+E always analyzes, on any base.">
-                <span class="set-lab">Hotkey</span>
-                <span class="set-val set-hotkey-msg" data-hotkey-msg hidden></span>
-                <button class="set-hotkey" data-set-hotkey type="button" aria-label="Remap the analyze hotkey"><kbd data-hotkey-kbd>Ins</kbd></button>
-              </div>
-              <div class="set-row" title="Drag the title bar to move the overlay elsewhere on screen — this button cancels that and returns to the default top-right corner">
-                <span class="set-lab">Position</span>
-                <button class="set-btn" data-set-reset-position type="button">Reset</button>
-              </div>
-              <div class="set-row" title="Launches the overlay automatically at Windows sign-in (stays unobtrusive: click-through, hides normally)">
-                <span class="set-lab">Launch with Windows</span>
-                <label class="set-switch">
-                  <input type="checkbox" data-set-autostart />
-                  <span class="set-switch-track"></span>
-                </label>
-              </div>
-              <div class="set-row" title="On a Windows-startup launch, stays in the tray instead of showing the overlay right away — press your analyze hotkey or use the tray icon to bring it up. Has no effect when you launch the app yourself.">
-                <span class="set-lab">Start minimized</span>
-                <label class="set-switch">
-                  <input type="checkbox" data-set-start-minimized />
-                  <span class="set-switch-track"></span>
-                </label>
-              </div>
-              <div class="set-sep"></div>
-              <div class="sec-h" title="Since the last Reset — each waystone counts once (re-analyzing it updates its score)">Session</div>
-              <div class="set-row">
-                <span class="set-lab">Waystones analyzed</span>
-                <span class="set-val" data-stat-count>0</span>
-              </div>
-              <div class="set-row">
-                <span class="set-lab">Average score</span>
-                <span class="set-val" data-stat-avg>—</span>
-              </div>
-              <div class="set-row">
-                <span class="set-lab">Best find</span>
-                <span class="set-val set-stat-best" data-stat-best>—</span>
-              </div>
-              <div class="set-log" data-stat-log></div>
-              <div class="set-row" title="Resets session stats to zero to start a fresh farming session (archives it into History first)">
-                <span class="set-lab">Stats</span>
-                <button class="set-btn" data-stat-reset type="button">Reset</button>
-              </div>
-              <div class="set-history" data-stat-history></div>
-              <div class="set-row" title="Copies your full session history as CSV to the clipboard — paste into Excel/Sheets">
-                <span class="set-lab">History</span>
-                <button class="set-btn" data-stat-export type="button" disabled>Export CSV</button>
-              </div>
-              <div class="set-group" data-meta-section>
-                <div class="set-sep"></div>
-                <div class="sec-h" title="Customizes per-mechanic recommendations (meta.json). Only values that differ from the defaults are written to the file.">Meta</div>
-                <span class="set-val set-meta-msg" data-meta-msg hidden></span>
-                <div class="set-row">
-                  <span class="set-lab">Mechanic</span>
-                  <button class="set-select" type="button" data-meta-mech aria-haspopup="listbox" aria-label="Mechanic to customize"></button>
-                </div>
-                <div class="set-row">
-                  <span class="set-lab">Priority stat</span>
-                  <button class="set-select" type="button" data-meta-priority aria-haspopup="listbox" aria-label="Priority stat"></button>
-                </div>
-                <div class="set-row set-col" title="Below this Juice Score, the mechanic isn't recommended">
+                <div class="set-row set-col">
                   <div class="set-row">
-                    <span class="set-lab">Skip if score below</span>
-                    <span class="set-val" data-meta-skip-val></span>
+                    <span class="set-lab">Overlay Opacity</span>
+                    <span class="set-val" data-set-opacity-val></span>
                   </div>
-                  <input class="set-slider" type="range" min="0" max="100" step="1" data-meta-skip aria-label="Skip threshold" />
+                  <input class="set-slider" type="range" min="60" max="100" step="1" data-set-opacity />
                 </div>
-                <div class="set-group" data-meta-tablets></div>
-                <div class="set-row" title="Rewrites meta.json empty: every mechanic and tablet reverts to the code's defaults">
-                  <span class="set-lab">Meta</span>
-                  <button class="set-btn" data-meta-reset type="button">Restore defaults</button>
+                <div class="set-row set-col">
+                  <div class="set-row">
+                    <span class="set-lab">Overlay Scale</span>
+                    <span class="set-val" data-set-scale-val></span>
+                  </div>
+                  <input class="set-slider" type="range" min="0.8" max="1.05" step="0.05" data-set-scale />
                 </div>
-                <div class="set-row" title="Re-reads meta.json from disk and reports the exact parse error, if any">
-                  <span class="set-lab">Meta</span>
-                  <button class="set-btn" data-meta-validate type="button">Validate meta.json</button>
+                <div class="set-sep"></div>
+                <div class="sec-h">Controls</div>
+                <div class="set-row" title="Click, then press the new key (Escape cancels). Ctrl+E always analyzes, on any base.">
+                  <span class="set-lab">Hotkey</span>
+                  <span class="set-val set-hotkey-msg" data-hotkey-msg hidden></span>
+                  <button class="set-hotkey" data-set-hotkey type="button" aria-label="Remap the analyze hotkey"><kbd data-hotkey-kbd>Ins</kbd></button>
+                </div>
+                <div class="set-row" title="Drag the title bar to move the overlay elsewhere on screen — this button cancels that and returns to the default top-right corner">
+                  <span class="set-lab">Position</span>
+                  <button class="set-btn" data-set-reset-position type="button">Reset</button>
                 </div>
               </div>
-              <div class="set-sep"></div>
-              <div class="sec-h">Application</div>
-              <div class="set-row">
-                <span class="set-lab">Version</span>
-                <span class="set-val" data-app-version>—</span>
+              <div class="set-tabpanel" role="tabpanel" data-set-tabpanel="session">
+                <div class="sec-h" title="Since the last Reset — each waystone counts once (re-analyzing it updates its score)">Session</div>
+                <div class="set-row">
+                  <span class="set-lab">Waystones analyzed</span>
+                  <span class="set-val" data-stat-count>0</span>
+                </div>
+                <div class="set-row">
+                  <span class="set-lab">Average score</span>
+                  <span class="set-val" data-stat-avg>—</span>
+                </div>
+                <div class="set-row">
+                  <span class="set-lab">Best find</span>
+                  <span class="set-val set-stat-best" data-stat-best>—</span>
+                </div>
+                <div class="set-log" data-stat-log></div>
+                <div class="set-row" title="Resets session stats to zero to start a fresh farming session (archives it into History first)">
+                  <span class="set-lab">Stats</span>
+                  <button class="set-btn" data-stat-reset type="button">Reset</button>
+                </div>
+                <div class="set-history" data-stat-history></div>
+                <div class="set-row" title="Copies your full session history as CSV to the clipboard — paste into Excel/Sheets">
+                  <span class="set-lab">History</span>
+                  <button class="set-btn" data-stat-export type="button" disabled>Export CSV</button>
+                </div>
               </div>
-              <div class="set-row" title="Beta builds may be less stable. Switching takes effect on the next check, no restart needed">
-                <span class="set-lab">Beta channel</span>
-                <label class="set-switch"><input type="checkbox" data-update-channel-beta /><span class="set-switch-track"></span></label>
+              <div class="set-tabpanel" role="tabpanel" data-set-tabpanel="meta">
+                <div class="set-group" data-meta-section>
+                  <div class="sec-h" title="Customizes per-mechanic recommendations (meta.json). Only values that differ from the defaults are written to the file.">Meta</div>
+                  <span class="set-val set-meta-msg" data-meta-msg hidden></span>
+                  <div class="set-row">
+                    <span class="set-lab">Mechanic</span>
+                    <button class="set-select" type="button" data-meta-mech aria-haspopup="listbox" aria-label="Mechanic to customize"></button>
+                  </div>
+                  <div class="set-row">
+                    <span class="set-lab">Priority stat</span>
+                    <button class="set-select" type="button" data-meta-priority aria-haspopup="listbox" aria-label="Priority stat"></button>
+                  </div>
+                  <div class="set-row set-col" title="Below this Juice Score, the mechanic isn't recommended">
+                    <div class="set-row">
+                      <span class="set-lab">Skip if score below</span>
+                      <span class="set-val" data-meta-skip-val></span>
+                    </div>
+                    <input class="set-slider" type="range" min="0" max="100" step="1" data-meta-skip aria-label="Skip threshold" />
+                  </div>
+                  <div class="set-group" data-meta-tablets></div>
+                  <div class="set-row" title="Rewrites meta.json empty: every mechanic and tablet reverts to the code's defaults">
+                    <span class="set-lab">Meta</span>
+                    <button class="set-btn" data-meta-reset type="button">Restore defaults</button>
+                  </div>
+                  <div class="set-row" title="Re-reads meta.json from disk and reports the exact parse error, if any">
+                    <span class="set-lab">Meta</span>
+                    <button class="set-btn" data-meta-validate type="button">Validate meta.json</button>
+                  </div>
+                </div>
               </div>
-              <div class="set-row" title="Checks GitHub; installation only ever starts on click — never automatically">
-                <span class="set-lab">Update</span>
-                <span class="set-val set-update-msg" data-update-msg hidden></span>
-                <button class="set-btn" data-update-btn type="button">Check for updates</button>
-              </div>
-              <div class="set-row" title="Change history, version by version — also shown automatically once after each update">
-                <span class="set-lab">Patch Notes</span>
-                <button class="set-btn" data-changelog-show type="button">Show</button>
-              </div>
-              <div class="set-row">
-                <span class="set-lab">Hide Overlay</span>
-                <button class="set-btn" data-set-hide type="button" title="Sends the overlay to the system tray. Right-click the tray icon to quit for good.">Hide</button>
+              <div class="set-tabpanel" role="tabpanel" data-set-tabpanel="app">
+                <div class="sec-h">Startup</div>
+                <div class="set-row" title="Launches the overlay automatically at Windows sign-in (stays unobtrusive: click-through, hides normally)">
+                  <span class="set-lab">Launch with Windows</span>
+                  <label class="set-switch">
+                    <input type="checkbox" data-set-autostart />
+                    <span class="set-switch-track"></span>
+                  </label>
+                </div>
+                <div class="set-row" title="On a Windows-startup launch, stays in the tray instead of showing the overlay right away — press your analyze hotkey or use the tray icon to bring it up. Has no effect when you launch the app yourself.">
+                  <span class="set-lab">Start minimized</span>
+                  <label class="set-switch">
+                    <input type="checkbox" data-set-start-minimized />
+                    <span class="set-switch-track"></span>
+                  </label>
+                </div>
+                <div class="set-sep"></div>
+                <div class="sec-h">Application</div>
+                <div class="set-row">
+                  <span class="set-lab">Version</span>
+                  <span class="set-val" data-app-version>—</span>
+                </div>
+                <div class="set-row" title="Beta builds may be less stable. Switching takes effect on the next check, no restart needed">
+                  <span class="set-lab">Beta channel</span>
+                  <label class="set-switch"><input type="checkbox" data-update-channel-beta /><span class="set-switch-track"></span></label>
+                </div>
+                <div class="set-row" title="Checks GitHub; installation only ever starts on click — never automatically">
+                  <span class="set-lab">Update</span>
+                  <span class="set-val set-update-msg" data-update-msg hidden></span>
+                  <button class="set-btn" data-update-btn type="button">Check for updates</button>
+                </div>
+                <div class="set-row" title="Change history, version by version — also shown automatically once after each update">
+                  <span class="set-lab">Patch Notes</span>
+                  <button class="set-btn" data-changelog-show type="button">Show</button>
+                </div>
+                <div class="set-row">
+                  <span class="set-lab">Hide Overlay</span>
+                  <button class="set-btn" data-set-hide type="button" title="Sends the overlay to the system tray. Right-click the tray icon to quit for good.">Hide</button>
+                </div>
               </div>
             </div>
           </div>
@@ -523,6 +538,7 @@ export function mountOverlay(
   const settingsBtn = q("[data-settings]");
   const minimizeBtn = q("[data-minimize]");
   const settingsPanel = q("[data-settings-panel]");
+  const settingsScroll = settingsPanel.querySelector(".settings-scroll") as HTMLElement;
   const setInsightsInput = q("[data-set-insights]") as HTMLInputElement;
   const setReduceInput = q("[data-set-reduce]") as HTMLInputElement;
   const setAutostartInput = q("[data-set-autostart]") as HTMLInputElement;
@@ -908,6 +924,50 @@ export function mountOverlay(
     panel.style.setProperty("--user-scale", scale.toFixed(2));
     setScaleInput.value = String(scale);
     setScaleVal.textContent = `${scale.toFixed(2)}x`;
+  }
+
+  /** Settings is four tabs rather than one long scroll (2026-07-26, user
+   *  request): Overlay (display + controls), Session (the per-session
+   *  waystone comparison — counts, average, best find, history), Meta
+   *  (meta.json editor) and App (version/update/hide). They share `.bodies`'
+   *  single region like every other panel, so switching tabs never resizes
+   *  the window; only the visible `.set-tabpanel` changes. The choice
+   *  persists so reopening Settings lands where the user left off. */
+  let tabBtns = [...settingsPanel.querySelectorAll<HTMLButtonElement>("[data-set-tab]")];
+  let tabPanels = [...settingsPanel.querySelectorAll<HTMLElement>("[data-set-tabpanel]")];
+
+  function selectSettingsTab(name: string): void {
+    openDropdownClose?.(); // an open dropdown belongs to the tab we're leaving
+    for (const btn of tabBtns) {
+      const on = btn.dataset.setTab === name;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-selected", String(on));
+      // Roving tabindex: only the active tab is a Tab stop, so Tab moves
+      // past the tab bar into the panel instead of through all four.
+      btn.tabIndex = on ? 0 : -1;
+    }
+    for (const p of tabPanels) p.hidden = p.dataset.setTabpanel !== name;
+    saveSettingsTab(name);
+    settingsScroll.scrollTop = 0; // a new tab starts at its own top, not the last one's offset
+    opts.onInteractiveChange?.();
+  }
+
+  for (const btn of tabBtns) {
+    btn.addEventListener("click", () => selectSettingsTab(btn.dataset.setTab ?? "overlay"));
+    // Left/Right walk the tab bar, the pattern every tablist follows —
+    // without it the roving tabindex above would strand keyboard users on
+    // whichever tab happened to be active.
+    btn.addEventListener("keydown", (ev) => {
+      const step = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0;
+      if (step === 0) return;
+      ev.preventDefault();
+      const visible = tabBtns.filter((b) => !b.hidden);
+      const at = visible.indexOf(btn);
+      const next = visible[(at + step + visible.length) % visible.length];
+      if (!next) return;
+      selectSettingsTab(next.dataset.setTab ?? "overlay");
+      next.focus();
+    });
   }
 
   function toggleSettings(): void {
@@ -1710,7 +1770,18 @@ export function mountOverlay(
     void loadMetaEditor(); // loaded once eagerly so a tablet click doesn't need its own fetch/loading state
   } else {
     metaSection.remove(); // plain-browser dev — no Tauri fs to edit
+    // ...which leaves the Meta tab pointing at an empty panel, so drop the
+    // tab (and its now-empty panel) rather than offering a dead one.
+    tabBtns.find((b) => b.dataset.setTab === "meta")?.remove();
+    tabPanels.find((p) => p.dataset.setTabpanel === "meta")?.remove();
+    tabBtns = tabBtns.filter((b) => b.isConnected);
+    tabPanels = tabPanels.filter((p) => p.isConnected);
   }
+  // After any tab may have been dropped above, so a persisted "meta" never
+  // selects a tab that no longer exists.
+  selectSettingsTab(
+    tabBtns.some((b) => b.dataset.setTab === loadSettingsTab()) ? loadSettingsTab() : "overlay",
+  );
   if (opts.onDragStart) {
     const onDragStart = opts.onDragStart;
     headEl.addEventListener("mousedown", (ev) => {

@@ -8,6 +8,7 @@ const KEYS = {
   opacity: "overlay.opacity",
   scale: "overlay.scale",
   updateChannel: "overlay.updateChannel",
+  settingsTab: "overlay.settingsTab",
 } as const;
 
 export const OPACITY_MIN = 60;
@@ -63,4 +64,16 @@ export function loadUpdateChannelBeta(): boolean {
 
 export function saveUpdateChannelBeta(beta: boolean): void {
   localStorage.setItem(KEYS.updateChannel, beta ? "beta" : "stable");
+}
+
+/** Which Settings tab to reopen on. Validated against the real tab list by
+ *  the caller — a stored name whose tab no longer exists (renamed section,
+ *  or the Meta tab in plain-browser dev where it's removed) must fall back
+ *  rather than leave the panel showing nothing. */
+export function loadSettingsTab(): string {
+  return localStorage.getItem(KEYS.settingsTab) ?? "overlay";
+}
+
+export function saveSettingsTab(name: string): void {
+  localStorage.setItem(KEYS.settingsTab, name);
 }

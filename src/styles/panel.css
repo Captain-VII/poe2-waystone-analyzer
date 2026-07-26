@@ -510,8 +510,49 @@
   left: 2px;
 }
 
+/* Settings' tab bar (RelicPanel's selectSettingsTab). Sits above
+   .settings-scroll inside .body-settings, which is already a flex column —
+   so the bar keeps its natural height and the scroll region takes the rest.
+   Only one .set-tabpanel is ever un-`hidden`, which is what keeps switching
+   tabs from resizing the window. */
+.set-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 8px 14px 0;
+  border-bottom: 1px solid rgba(184, 135, 53, 0.25);
+}
+.set-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--grey);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 5px 4px;
+  margin-bottom: -1px; /* the active underline sits ON the bar's own border */
+  cursor: pointer;
+  transition: color 120ms ease-out, border-color 120ms ease-out;
+}
+.set-tab:hover { color: var(--ivory); }
+.set-tab.active { color: var(--gold-hi); border-bottom-color: var(--gold-hi); }
+.set-tab:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: -2px; }
+
+.set-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.set-tabpanel[hidden] { display: none; }
+
 .settings-scroll {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 14px 12px;
   display: flex;

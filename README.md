@@ -157,18 +157,19 @@ danger is reported alongside instead of baked in.
 
 ### Settings
 
-The gear button opens:
+The gear button opens four tabs:
 
-- **Controls** — hotkey remap, **Launch with Windows** (registry Run key, no
-  elevation), **Start minimized**.
-- **Overlay Opacity** and **Overlay Scale**.
-- **Position → Reset** — re-anchor top-right.
-- **Stats** — waystones analyzed, average score, best find for the current
-  session.
-- **History** — every past session archived, with **Export CSV** to the
-  clipboard for Excel/Sheets.
-- **Meta** — the in-app editor described below.
-- **Check for updates**.
+- **Overlay** — Insights toggle, Reduce Effects, **Overlay Opacity** and
+  **Overlay Scale**, hotkey remap, and **Position → Reset** (re-anchor
+  top-right).
+- **Session** — waystones analyzed, average score and best find for the
+  current session, plus **History**: every past session archived, with
+  **Export CSV** to the clipboard for Excel/Sheets.
+- **Meta** — the in-app editor described below, plus **Validate meta.json**
+  (reports the exact parse error, with line and column).
+- **App** — **Launch with Windows** (registry Run key, no elevation),
+  **Start minimized**, version, **Beta channel** opt-in, **Check for
+  updates**, patch notes, and **Hide Overlay**.
 
 ### Tuning via meta.json
 
