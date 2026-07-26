@@ -216,7 +216,7 @@
 .status-chip.status-err {
   color: var(--danger);
   border-left: 2px solid var(--danger);
-  background: rgba(181, 74, 58, 0.12);
+  background: rgba(208, 101, 80, 0.12); /* --danger #d06550 */
 }
 .status-chip.status-info {
   color: var(--grey);
@@ -986,11 +986,11 @@
    glance (2026-07-12, user request) — same box (26x26, 3px radius) as its
    siblings via the shared rule above, just the fill/border tinted. */
 .minimize-btn {
-  background: rgba(181, 74, 58, 0.1);
-  border-color: rgba(181, 74, 58, 0.45);
+  background: rgba(208, 101, 80, 0.1); /* --danger #d06550 */
+  border-color: rgba(208, 101, 80, 0.45);
 }
 .minimize-btn:hover {
-  background: rgba(181, 74, 58, 0.2);
+  background: rgba(208, 101, 80, 0.2);
   border-color: var(--danger);
   color: var(--danger);
 }

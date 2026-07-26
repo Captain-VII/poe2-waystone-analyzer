@@ -498,10 +498,10 @@
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(181, 74, 58, 0.45) transparent;
+  scrollbar-color: rgba(208, 101, 80, 0.45) transparent; /* --danger #d06550 */
 }
 .danger-list::-webkit-scrollbar { width: 3px; }
-.danger-list::-webkit-scrollbar-thumb { background: rgba(181, 74, 58, 0.45); }
+.danger-list::-webkit-scrollbar-thumb { background: rgba(208, 101, 80, 0.45); }
 /* Group headers stay lighter than .sec-h — labels inside a section, not a
    new section. Color carries the tier; size keeps them out of the way. */
 .dl-group-h {

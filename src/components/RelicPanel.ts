@@ -222,7 +222,7 @@ const TABLET_ICONS: Record<string, string> = {
 // ramp (0% = --danger, 100% = --god, same hex values the rest of the app
 // already uses for its worst/best states), gives both the exact number
 // and an at-a-glance visual cue in one compact element.
-const FIT_COLOR_LOW: [number, number, number] = [181, 74, 58]; // --danger #b54a3a
+const FIT_COLOR_LOW: [number, number, number] = [208, 101, 80]; // --danger #d06550
 const FIT_COLOR_HIGH: [number, number, number] = [255, 211, 106]; // --god #ffd36a
 
 function fitColor(percent: number): string {
