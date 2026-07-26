@@ -32,8 +32,21 @@ Validé, mais pas urgent :
 
 - [ ] Test multi-écrans réel — la cascade de fallback (Full → Mini) n'a
       jamais été exercée sur du vrai matériel multi-moniteur/DPI mixte
-      (KNOWN_ISSUES #6). Inclure le cas **écran déconnecté** : l'ancrage
-      haut-droite vise un écran qui n'existe plus.
+      (KNOWN_ISSUES #6). Le cas **écran déconnecté** (l'ancrage haut-droite
+      visait un écran qui n'existe plus) est corrigé côté code — livré
+      2026-07-26, `resolveMonitor()` dans `placement.ts` — mais reste à
+      vérifier sur du vrai matériel :
+      1. Deux écrans, DPI différent (ex: 100% / 150%) — glisser l'overlay
+         de l'un à l'autre, vérifier l'ancrage haut-droite et le fallback
+         Mini si l'écran cible est petit.
+      2. Débrancher l'écran sur lequel l'overlay est actuellement affiché
+         pendant que le jeu tourne — l'overlay doit se ré-ancrer sur un
+         écran restant, pas rester bloqué hors-champ.
+      3. Changer la résolution d'affichage à la volée (Windows → Réglages
+         d'affichage) pendant que l'overlay est visible.
+      Si un de ces cas se comporte mal, `Settings → App → Export Logs`
+      contient maintenant un événement `monitor-fallback` à chaque fois que
+      la résolution de moniteur a dû se rabattre sur primary/available.
 
 ## Idées
 

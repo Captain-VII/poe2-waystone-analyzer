@@ -986,11 +986,24 @@ terminal, before triggering Ins.
 ## 6. No live display/resize testing across multiple monitor configurations
 
 The overlay re-anchors itself and falls back to a smaller layout
-(Full → Compact → Mini) when it detects a display, DPI, or resolution change,
-and this was verified to attach and run without errors. It has not been
-exercised against every real multi-monitor/DPI-mismatch hardware
-configuration — if the overlay lands somewhere unexpected after changing
-displays, that's useful to report.
+(Full → Mini — Compact mode, the former middle rung, was removed) when it
+detects a display, DPI, or resolution change, and this was verified to
+attach and run without errors. It has not been exercised against every real
+multi-monitor/DPI-mismatch hardware configuration — if the overlay lands
+somewhere unexpected after changing displays, that's useful to report.
+
+**Update (2026-07-26):** fixed a real gap in the disconnected-screen case
+this issue calls out: `placeTopRight()`/`computeEffectiveMode()`
+(`placement.ts`) used `currentMonitor()` directly, which returns `null`
+right after the display the overlay was anchored to disconnects (its stale
+position no longer overlaps any connected monitor) — `placeTopRight()`
+silently no-op'd on `null`, so the overlay could get stuck off-screen for
+good with no self-heal. Both now go through a shared `resolveMonitor()`
+that falls through current → primary → first available monitor, and logs
+(`tag: "monitor-fallback"`, exportable via Settings → App → Export Logs)
+whenever it had to fall back. Verified in code only — real hardware testing
+(multi-monitor, mixed DPI, actually unplugging a display) is still
+outstanding; see the manual protocol in ROADMAP.md's "Ensuite" item.
 
 ## 7. ~~Reduce-effects and Compact-compression settings have no UI yet~~ (resolved 2026-07-08)
 

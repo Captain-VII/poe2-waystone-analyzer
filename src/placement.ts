@@ -11,13 +11,53 @@ const PANEL_BLEED = 12;
 /** §2 footprint. Full adds 16px clearance for its up-left micro-shift. */
 const FULL_FOOTPRINT = { w: 580 + 16, h: 332 + 16 };
 
+/** Resolves the monitor to anchor/size against, falling back when
+ *  `currentMonitor()` comes back null — which is exactly what happens right
+ *  after the display the overlay was on gets disconnected, before the OS
+ *  has a chance to relocate the window: the window's stale position no
+ *  longer overlaps any connected monitor. Without a fallback here,
+ *  `placeTopRight()` used to silently no-op in that case, leaving the
+ *  overlay stuck wherever it was — potentially off-screen for good
+ *  (KNOWN_ISSUES.md #6's disconnected-screen case). Falls through
+ *  current -> primary -> first available, so there's always a real monitor
+ *  to re-anchor onto as long as at least one is connected. `source` is
+ *  reported back so callers can log the degraded cases. */
+async function resolveMonitor(): Promise<{
+  monitor: Awaited<ReturnType<typeof import("@tauri-apps/api/window").currentMonitor>>;
+  source: "current" | "primary" | "available" | "none";
+}> {
+  const { currentMonitor, primaryMonitor, availableMonitors } = await import("@tauri-apps/api/window");
+  const current = await currentMonitor();
+  if (current) return { monitor: current, source: "current" };
+  const primary = await primaryMonitor();
+  if (primary) return { monitor: primary, source: "primary" };
+  const [first] = await availableMonitors();
+  if (first) return { monitor: first, source: "available" };
+  // Genuinely no monitor detected — degrade silently to the plain-browser
+  // "full" default rather than throwing; there's nothing to log to in that
+  // state either (invoke would just fail).
+  return { monitor: null, source: "none" };
+}
+
+/** Reports a degraded monitor-resolution outcome to the exportable log file
+ *  (Settings -> App -> Export Logs) — the currently-anchored display went
+ *  away and we fell back to primary/first-available, exactly the
+ *  disconnected-screen scenario KNOWN_ISSUES.md #6 flags as unverified on
+ *  real hardware. `source: "none"` (no monitor at all) can't reach an
+ *  invoke that would need one, so it's not logged here. */
+async function logMonitorFallback(source: "primary" | "available"): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("log_frontend_report", {
+    report: JSON.stringify({ tag: "monitor-fallback", source }, null, 2),
+  }).catch(() => {});
+}
+
 /** §2 fallback: Full fits (with micro-shift)? → Full. Else → Mini — the
  *  emergency fallback for screens too small for Full (Compact mode, the
  *  former middle rung, was removed). */
 export async function computeEffectiveMode(): Promise<EffectiveMode> {
   if (!("__TAURI_INTERNALS__" in window)) return "full"; // plain-browser dev
-  const { currentMonitor } = await import("@tauri-apps/api/window");
-  const mon = await currentMonitor();
+  const { monitor: mon } = await resolveMonitor();
   if (!mon) return "full";
 
   const scale = mon.scaleFactor;
@@ -38,12 +78,11 @@ let repositioning = false;
 
 export async function placeTopRight(): Promise<void> {
   if (!("__TAURI_INTERNALS__" in window)) return; // plain-browser vite dev
-  const { getCurrentWindow, currentMonitor, LogicalPosition } = await import(
-    "@tauri-apps/api/window"
-  );
+  const { getCurrentWindow, LogicalPosition } = await import("@tauri-apps/api/window");
   const win = getCurrentWindow();
-  const mon = await currentMonitor();
+  const { monitor: mon, source } = await resolveMonitor();
   if (!mon) return;
+  if (source === "primary" || source === "available") void logMonitorFallback(source);
 
   const scale = mon.scaleFactor;
   const monX = mon.position.x / scale;

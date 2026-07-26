@@ -9,6 +9,7 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 - **New: an "Export Logs" button in Settings → App.** Opens the folder with diagnostic logs, so you can share the latest file with support when something's wrong (like the overlay not showing up).
 - **Diagnostic logs never store clipboard text.** Only a length is recorded now, not a preview — your clipboard can hold anything, not just waystones.
+- **Fixed: the overlay could get stuck off-screen if you disconnected the monitor it was on.** It now re-anchors onto whatever monitor is left.
 
 ## 0.5.0
 
