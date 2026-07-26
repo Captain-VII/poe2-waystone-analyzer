@@ -170,11 +170,14 @@ Vrac à trier.
 
 ### Confort & diagnostic
 
-- [ ] **Journalisation structurée** côté Rust, avec export depuis les
-      Réglages — pour diagnostiquer à distance, à commencer par le bug
-      écran noir. Ne doit rien coûter au chemin chaud. (Pas Winston/Pino :
-      ce sont des bibliothèques Node, inadaptées au côté Rust où le log
-      doit vivre — `tracing` est l'équivalent de l'écosystème.)
+- [x] **Journalisation structurée** — livré 2026-07-26 : `tracing` +
+      `tracing-appender` (fichier journal quotidien dans `app_log_dir()`,
+      writer non-bloquant — rien sur le chemin chaud), tous les `println!`
+      de `lib.rs` migrés avec `target`/champs structurés. Export depuis les
+      Réglages → App → **Export Logs** (`revealItemInDir`, capability
+      `opener:allow-reveal-item-in-dir`). Prépare le diagnostic à distance du
+      bug écran noir (KNOWN_ISSUES.md §1) — reste à récupérer un vrai log
+      d'un testeur ayant reproduit le bug.
 - [x] **Surveillance de `meta.json`** — livré 2026-07-26 : `watchMetaFile`
       (plugin-fs, feature `watch`, debounce 1s) recharge les tables quand le
       fichier change hors de l'app, rafraîchit l'éditeur ouvert et journalise

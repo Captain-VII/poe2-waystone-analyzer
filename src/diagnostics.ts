@@ -141,12 +141,16 @@ export async function showWhenPainted(): Promise<void> {
 
 /** Lightweight per-Ins checkpoint (unlike sendReport's full DOM dump) —
  *  confirms whether a real clipboard analysis was applied vs. left
- *  unchanged. See docs/release-checklist.md §3. */
+ *  unchanged. See docs/release-checklist.md §3. Deliberately takes a
+ *  clipboard *length*, never the text itself: the clipboard can hold
+ *  anything unrelated to the game (a password, a private message), and
+ *  this now lands in a file the player can export from Settings — logging
+ *  its content would leak arbitrary personal data, not just game state. */
 export async function logAnalyzeAttempt(info: {
   hadClipboardText: boolean;
   applied: { score: number; tierClass: string; name: string } | null;
   failure?: "clipboard" | "not-waystone" | null;
-  clipPreview?: string | null;
+  clipLength?: number | null;
 }): Promise<void> {
   if (!("__TAURI_INTERNALS__" in window)) return;
   const { invoke } = await import("@tauri-apps/api/core");

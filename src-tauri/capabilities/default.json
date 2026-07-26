@@ -22,6 +22,7 @@
       "identifier": "opener:allow-open-url",
       "allow": [{ "url": "https://poe2.re/*" }]
     },
+    "opener:allow-reveal-item-in-dir",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [{ "path": "$APPCONFIG/meta.json" }]

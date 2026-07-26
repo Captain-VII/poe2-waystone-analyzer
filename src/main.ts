@@ -132,6 +132,22 @@ async function exportSessionHistory(): Promise<boolean> {
   }
 }
 
+/** Settings' App tab "Export Logs" button — reveals the folder holding the
+ *  Rust-side diagnostic log file in the OS file explorer, so a tester can
+ *  hand it to support (e.g. for the black-screen bug). Tauri-only, same
+ *  guard as exportSessionHistory above. */
+async function exportLogs(): Promise<boolean> {
+  if (!("__TAURI_INTERNALS__" in window)) return false;
+  try {
+    const { appLogDir } = await import("@tauri-apps/api/path");
+    const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+    await revealItemInDir(await appLogDir());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Header's copy-summary button — writes RelicPanel's one-line summary
  *  (score/tier/verdict/best mechanic) to the clipboard, same Tauri-only
  *  pattern as exportSessionHistory above. */
@@ -239,6 +255,7 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
   onResetPosition: resetPosition,
   onResetStats: resetSessionStats,
   onExportHistory: exportSessionHistory,
+  onExportLogs: exportLogs,
   onCopySummary: copySummary,
   onShareWaystone: "__TAURI_INTERNALS__" in window ? shareWaystone : undefined,
   onImportShare: "__TAURI_INTERNALS__" in window ? importSharedWaystone : undefined,
@@ -345,7 +362,7 @@ async function analyze(simulateCopy = true): Promise<void> {
   // Support/debugging checkpoint: confirms whether Ins actually applied a
   // real clipboard analysis vs. left the display unchanged (invalid/no
   // Waystone on clipboard) — see docs/release-checklist.md §3.
-  await logAnalyzeAttempt({ hadClipboardText: !!clip, applied, failure, clipPreview: clip?.slice(0, 60) ?? null });
+  await logAnalyzeAttempt({ hadClipboardText: !!clip, applied, failure, clipLength: clip?.length ?? null });
   if (failure) {
     // Only on a real press — the startup-only analyze(false) keeps its
     // silent mock-data fallback (plain-browser dev has no clipboard).

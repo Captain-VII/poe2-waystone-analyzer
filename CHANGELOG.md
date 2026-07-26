@@ -7,6 +7,9 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+- **New: an "Export Logs" button in Settings → App.** Opens the folder with diagnostic logs, so you can share the latest file with support when something's wrong (like the overlay not showing up).
+- **Diagnostic logs never store clipboard text.** Only a length is recorded now, not a preview — your clipboard can hold anything, not just waystones.
+
 ## 0.5.0
 
 - **New: the overlay can now ask if you skipped a dangerous waystone.** Analyze a high-scoring but "Very Dangerous" waystone, then a different one shortly after, and a discreet Yes/No prompt asks if the danger was why — purely local, helps tune future danger thresholds against real play instead of guides.

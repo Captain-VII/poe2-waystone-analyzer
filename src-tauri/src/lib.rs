@@ -25,6 +25,34 @@ const DEFAULT_META_JSON: &str = include_str!("../default-meta.json");
 /// hide()/show() cycle.
 const WINDOW_LOGICAL_SIZE: (f64, f64) = (620.0, 406.0);
 
+/// Structured logging (ROADMAP.md "Confort & diagnostic"): a daily-rotating
+/// file in the OS log dir, plus stdout under `tauri dev`. The returned guard
+/// must be kept alive (managed as Tauri state) — dropping it stops the
+/// background flush thread and buffered lines never reach disk. Uses
+/// `tracing_appender::non_blocking` specifically so file I/O never happens
+/// on the calling thread (the "must cost nothing on the hot path" rule from
+/// the roadmap item).
+fn init_logging(app: &tauri::AppHandle) -> tracing_appender::non_blocking::WorkerGuard {
+    use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+    let log_dir = app
+        .path()
+        .app_log_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let _ = fs::create_dir_all(&log_dir);
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "waystone-overlay.log");
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let _ = tracing_subscriber::registry()
+        .with(filter)
+        .with(fmt::layer().with_writer(std::io::stdout))
+        .with(fmt::layer().with_writer(non_blocking).with_ansi(false))
+        .try_init();
+
+    guard
+}
+
 fn seed_meta_json(app: &tauri::AppHandle) {
     let Ok(dir) = app.path().app_config_dir() else {
         return;
@@ -116,7 +144,7 @@ fn restore_known_size(window: &tauri::WebviewWindow) {
 // first composite still gets caught.
 #[tauri::command]
 fn show_window(window: tauri::WebviewWindow) -> Result<(), String> {
-    println!("[overlay] show_window invoked by frontend (post-paint signal)");
+    tracing::debug!(target: "overlay", "show_window invoked by frontend (post-paint signal)");
     window.show().map_err(|e| e.to_string())?;
     startup_nudge_burst(&window);
     schedule_startup_render_check(&window);
@@ -137,7 +165,7 @@ fn startup_nudge_burst(window: &tauri::WebviewWindow) {
     thread::spawn(move || {
         for (i, delay_ms) in [300u64, 500, 700].iter().enumerate() {
             thread::sleep(Duration::from_millis(*delay_ms));
-            println!("[overlay] startup nudge {}/3 firing", i + 1);
+            tracing::debug!(target: "overlay", nudge = i + 1, "startup nudge firing");
             recompose_nudge(&handle);
         }
     });
@@ -342,18 +370,18 @@ fn schedule_startup_render_check(window: &tauri::WebviewWindow) {
     thread::spawn(move || {
         thread::sleep(Duration::from_millis(1750));
         let Ok(hwnd) = handle.hwnd() else {
-            println!("[overlay] render-check: could not read hwnd, skipping");
+            tracing::warn!(target: "overlay", "render-check: could not read hwnd, skipping");
             return;
         };
         let raw: windows_sys::Win32::Foundation::HWND = hwnd.0;
         match capture_window_is_blank(raw) {
             Some(true) => {
-                println!("[overlay] render-check: window appears BLANK/BLACK (real OS capture)")
+                tracing::warn!(target: "overlay", "render-check: window appears BLANK/BLACK (real OS capture)")
             }
             Some(false) => {
-                println!("[overlay] render-check: window renders fine (real OS capture)")
+                tracing::info!(target: "overlay", "render-check: window renders fine (real OS capture)")
             }
-            None => println!("[overlay] render-check: capture failed, no verdict"),
+            None => tracing::warn!(target: "overlay", "render-check: capture failed, no verdict"),
         }
     });
 }
@@ -366,7 +394,7 @@ fn schedule_startup_render_check(_window: &tauri::WebviewWindow) {}
 /// frame race has also been observed right after un-hiding.
 #[tauri::command]
 fn reveal_window(window: tauri::WebviewWindow) -> Result<(), String> {
-    println!("[overlay] reveal_window invoked by frontend");
+    tracing::debug!(target: "overlay", "reveal_window invoked by frontend");
     window.show().map_err(|e| e.to_string())?;
     restore_known_size(&window);
     Ok(())
@@ -380,7 +408,7 @@ fn reveal_window(window: tauri::WebviewWindow) -> Result<(), String> {
 fn simulate_copy() -> Result<(), String> {
     use enigo::{Direction::Click, Enigo, Key, Keyboard, Settings};
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| {
-        println!("[overlay] simulate_copy: Enigo::new failed: {e}");
+        tracing::error!(target: "overlay", error = %e, "simulate_copy: Enigo::new failed");
         e.to_string()
     })?;
     // Key::Unicode('c') sends a KEYEVENTF_UNICODE WM_CHAR, not a VK_C
@@ -429,8 +457,8 @@ fn simulate_copy() -> Result<(), String> {
         Ok(())
     })();
     match &result {
-        Ok(()) => println!("[overlay] simulate_copy: Ctrl+C sent"),
-        Err(e) => println!("[overlay] simulate_copy: key send failed: {e}"),
+        Ok(()) => tracing::debug!(target: "overlay", "simulate_copy: Ctrl+C sent"),
+        Err(e) => tracing::error!(target: "overlay", error = %e, "simulate_copy: key send failed"),
     }
     result.map_err(|e| e.to_string())
 }
@@ -441,7 +469,7 @@ fn simulate_copy() -> Result<(), String> {
 /// overlay mid-session.
 #[tauri::command]
 fn hide_window(window: tauri::WebviewWindow) -> Result<(), String> {
-    println!("[overlay] hide_window invoked by frontend");
+    tracing::debug!(target: "overlay", "hide_window invoked by frontend");
     window.hide().map_err(|e| e.to_string())
 }
 
@@ -459,9 +487,7 @@ fn was_autostart_launch() -> bool {
 
 #[tauri::command]
 fn log_frontend_report(report: String) {
-    println!("=== frontend report ===");
-    println!("{report}");
-    println!("=======================");
+    tracing::info!(target: "frontend", report = %report, "frontend report received");
 }
 
 /// Two rolling GitHub releases serve as updater feeds. `updater-beta` is
@@ -562,34 +588,33 @@ async fn log_window_diagnostics(window: tauri::WebviewWindow) -> Result<(), Stri
     let visible = window.is_visible().map_err(|e| e.to_string())?;
     let focused = window.is_focused().map_err(|e| e.to_string())?;
 
-    println!("=== window diagnostics ===");
-    println!("label:            {label}");
-    println!(
-        "outer_size:       {}x{}",
-        outer_size.width, outer_size.height
+    let current_monitor = monitor.as_ref().map_or_else(
+        || "none".to_string(),
+        |m| {
+            format!(
+                "pos=({},{}) size={}x{} scale={}",
+                m.position().x,
+                m.position().y,
+                m.size().width,
+                m.size().height,
+                m.scale_factor()
+            )
+        },
     );
-    println!(
-        "inner_size:       {}x{}",
-        inner_size.width, inner_size.height
+    tracing::info!(
+        target: "window_diagnostics",
+        label = %label,
+        outer_size = format!("{}x{}", outer_size.width, outer_size.height),
+        inner_size = format!("{}x{}", inner_size.width, inner_size.height),
+        outer_position = format!("({}, {})", outer_pos.x, outer_pos.y),
+        scale_factor = scale,
+        current_monitor = %current_monitor,
+        visible,
+        focused,
+        "window diagnostics snapshot"
     );
-    println!("outer_position:   ({}, {})", outer_pos.x, outer_pos.y);
-    println!("scale_factor:     {scale}");
-    if let Some(m) = &monitor {
-        println!(
-            "current_monitor:  pos=({},{}) size={}x{} scale={}",
-            m.position().x,
-            m.position().y,
-            m.size().width,
-            m.size().height,
-            m.scale_factor()
-        );
-    } else {
-        println!("current_monitor:  none");
-    }
-    println!("visible:          {visible}");
-    println!("focused:          {focused}");
-    println!("=== env matrix ===");
-    for key in [
+
+    let env_matrix: Vec<String> = [
         "OVERLAY_DEBUG_OPAQUE",
         "OVERLAY_TRANSPARENT",
         "OVERLAY_DECORATIONS",
@@ -597,13 +622,15 @@ async fn log_window_diagnostics(window: tauri::WebviewWindow) -> Result<(), Stri
         "OVERLAY_SHADOW",
         "OVERLAY_SKIP_TASKBAR",
         "OVERLAY_CLICK_THROUGH",
-    ] {
-        println!(
-            "{key}: {}",
-            env::var(key).unwrap_or_else(|_| "(unset)".into())
-        );
-    }
-    println!("==========================");
+    ]
+    .into_iter()
+    .map(|key| format!("{key}={}", env::var(key).unwrap_or_else(|_| "(unset)".into())))
+    .collect();
+    tracing::info!(
+        target: "window_diagnostics",
+        env_matrix = %env_matrix.join(", "),
+        "env matrix snapshot"
+    );
     Ok(())
 }
 
@@ -798,7 +825,7 @@ fn persist_hotkey_base(app: &tauri::AppHandle, base: &str) {
         let _ = fs::create_dir_all(dir);
     }
     if let Err(e) = fs::write(&path, base) {
-        println!("[hotkey] persist failed: {e}");
+        tracing::error!(target: "hotkey", error = %e, "persist failed");
     }
 }
 
@@ -811,7 +838,7 @@ fn load_hotkey_base(app: &tauri::AppHandle) -> String {
             if validate_hotkey_base(&base).is_ok() {
                 base
             } else {
-                println!("[hotkey] stored base {base:?} invalid — using {DEFAULT_HOTKEY_BASE}");
+                tracing::warn!(target: "hotkey", stored = ?base, fallback = DEFAULT_HOTKEY_BASE, "stored base invalid, using fallback");
                 DEFAULT_HOTKEY_BASE.into()
             }
         }
@@ -851,7 +878,7 @@ fn set_hotkey_base(
         match gs.register(accel.as_str()) {
             Ok(()) => registered.push(accel),
             Err(e) => {
-                println!("[hotkey] remap to {base} failed at {accel}: {e} — rolling back to {old}");
+                tracing::warn!(target: "hotkey", %base, %accel, error = %e, rollback_to = %old, "remap failed, rolling back");
                 for done in &registered {
                     let _ = gs.unregister(done.as_str());
                 }
@@ -864,7 +891,7 @@ fn set_hotkey_base(
     }
     *state.0.lock().unwrap() = base.clone();
     persist_hotkey_base(&app, &base);
-    println!("[hotkey] base remapped: {old} -> {base}");
+    tracing::info!(target: "hotkey", from = %old, to = %base, "base remapped");
     Ok(base)
 }
 
@@ -877,9 +904,9 @@ fn register_hotkeys(app: &tauri::AppHandle, base: &str) {
     let mut pending: Vec<String> = Vec::new();
     for (accel, _) in all_accels(base) {
         match app.global_shortcut().register(accel.as_str()) {
-            Ok(()) => println!("[hotkey] {accel} registered"),
+            Ok(()) => tracing::info!(target: "hotkey", %accel, "registered"),
             Err(e) => {
-                println!("[hotkey] {accel} FAILED to register (will retry): {e}");
+                tracing::warn!(target: "hotkey", %accel, error = %e, "registration failed, will retry");
                 pending.push(accel);
             }
         }
@@ -900,7 +927,7 @@ fn register_hotkeys(app: &tauri::AppHandle, base: &str) {
             pending.retain(
                 |accel| match handle.global_shortcut().register(accel.as_str()) {
                     Ok(()) => {
-                        println!("[hotkey] {accel} registered after retry");
+                        tracing::info!(target: "hotkey", %accel, "registered after retry");
                         false
                     }
                     Err(_) => true,
@@ -911,7 +938,7 @@ fn register_hotkeys(app: &tauri::AppHandle, base: &str) {
             }
         }
         for accel in &pending {
-            println!("[hotkey] {accel} PERMANENTLY unavailable — bound by another app");
+            tracing::error!(target: "hotkey", %accel, "permanently unavailable — bound by another app");
         }
     });
 }
@@ -934,12 +961,14 @@ pub fn run() {
                         .map(|(_, action)| action);
                     match action {
                         Some(action) => {
-                            println!("[hotkey] shortcut pressed -> {action}");
+                            tracing::debug!(target: "hotkey", %action, "shortcut pressed");
                             if let Err(e) = app.emit("overlay://hotkey", action) {
-                                println!("[hotkey] emit failed: {e}");
+                                tracing::error!(target: "hotkey", error = %e, "emit failed");
                             }
                         }
-                        None => println!("[hotkey] unmatched shortcut fired: {shortcut:?}"),
+                        None => {
+                            tracing::warn!(target: "hotkey", shortcut = ?shortcut, "unmatched shortcut fired")
+                        }
                     }
                 })
                 .build(),
@@ -977,6 +1006,7 @@ pub fn run() {
             is_debug_overlay
         ])
         .setup(|app| {
+            app.manage(init_logging(app.handle()));
             seed_meta_json(app.handle());
             let hotkey_base = load_hotkey_base(app.handle());
             app.manage(HotkeyBase(Mutex::new(hotkey_base.clone())));
@@ -1036,10 +1066,16 @@ pub fn run() {
 
             let win = builder.build()?;
 
-            println!(
-                "[overlay] window built: debug_opaque={debug_opaque} transparent={transparent} \
-                 decorations={decorations} always_on_top={always_on_top} shadow={shadow} \
-                 skip_taskbar={skip_taskbar} click_through={click_through}"
+            tracing::info!(
+                target: "overlay",
+                debug_opaque,
+                transparent,
+                decorations,
+                always_on_top,
+                shadow,
+                skip_taskbar,
+                click_through,
+                "window built"
             );
 
             if click_through {
@@ -1087,7 +1123,7 @@ pub fn run() {
                             interactive = inside;
                             let _ = handle.set_ignore_cursor_events(!inside);
                             if inside && is_real_transition {
-                                println!("[overlay] hover-nudge firing (cursor entered window)");
+                                tracing::debug!(target: "overlay", "hover-nudge firing (cursor entered window)");
                                 recompose_nudge(&handle);
                             }
                         }
@@ -1107,7 +1143,7 @@ pub fn run() {
                     }
                 });
             } else {
-                println!("[overlay] click-through disabled — window is focusable/interactive");
+                tracing::info!(target: "overlay", "click-through disabled — window is focusable/interactive");
             }
 
             // System-tray icon: the only way to fully quit. The window itself
@@ -1128,11 +1164,11 @@ pub fn run() {
                 .tooltip("Waystone-Analyzer")
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "quit" => {
-                        println!("[overlay] quit requested from tray menu");
+                        tracing::info!(target: "overlay", "quit requested from tray menu");
                         app.exit(0);
                     }
                     "show" => {
-                        println!("[overlay] show requested from tray menu");
+                        tracing::debug!(target: "overlay", "show requested from tray menu");
                         let _ = tray_win.show();
                         let _ = tray_win.set_focus();
                         restore_known_size(&tray_win);

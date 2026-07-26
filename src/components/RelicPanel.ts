@@ -79,6 +79,11 @@ export interface OverlayOptions {
    *  show brief feedback. Undefined in plain-browser dev (no clipboard
    *  plugin), same convention as onSetHotkey/onSetAutostart above. */
   onExportHistory?(): Promise<boolean>;
+  /** Settings' App tab "Export Logs" button — main.ts reveals the app's log
+   *  folder in the OS file explorer and reports success/failure so the
+   *  button can show brief feedback. Undefined in plain-browser dev, same
+   *  convention as onExportHistory above. */
+  onExportLogs?(): Promise<boolean>;
   /** Header's copy-summary button. main.ts writes the given text to the
    *  clipboard and reports success/failure so the button can show brief
    *  feedback. Undefined in plain-browser dev, same convention as
@@ -526,6 +531,10 @@ export function mountOverlay(
                   <span class="set-lab">Patch Notes</span>
                   <button class="set-btn" data-changelog-show type="button">Show</button>
                 </div>
+                <div class="set-row" title="Opens the folder with diagnostic logs — share the latest file with support when something's wrong">
+                  <span class="set-lab">Export Logs</span>
+                  <button class="set-btn" data-export-logs type="button">Export Logs</button>
+                </div>
                 <div class="set-row">
                   <span class="set-lab">Hide Overlay</span>
                   <button class="set-btn" data-set-hide type="button" title="Sends the overlay to the system tray. Right-click the tray icon to quit for good.">Hide</button>
@@ -602,6 +611,7 @@ export function mountOverlay(
   const changelogPanel = q("[data-changelog-panel]");
   const changelogList = q("[data-changelog-list]");
   const changelogShowBtn = q("[data-changelog-show]");
+  const exportLogsBtn = q("[data-export-logs]") as HTMLButtonElement;
   const changelogCloseBtn = q("[data-changelog-close]");
   const guidePanel = q("[data-guide-panel]");
   const guideList = q("[data-guide-list]");
@@ -1875,6 +1885,15 @@ export function mountOverlay(
       clearTimeout(exportFeedbackTimer);
       statExportBtn.textContent = ok ? "Copied!" : "Failed";
       exportFeedbackTimer = setTimeout(() => (statExportBtn.textContent = "Export CSV"), 1500);
+    })();
+  });
+  let exportLogsFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+  exportLogsBtn.addEventListener("click", () => {
+    void (async () => {
+      const ok = await opts.onExportLogs?.();
+      clearTimeout(exportLogsFeedbackTimer);
+      exportLogsBtn.textContent = ok ? "Opened!" : "Failed";
+      exportLogsFeedbackTimer = setTimeout(() => (exportLogsBtn.textContent = "Export Logs"), 1500);
     })();
   });
   let importFeedbackTimer: ReturnType<typeof setTimeout> | undefined;

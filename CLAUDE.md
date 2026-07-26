@@ -262,7 +262,9 @@ import { invoke } from "@tauri-apps/api/core";
 void invoke("log_frontend_report", { report: "mon message" });
 ```
 
-Les logs vont dans le fichier dev (`tauri dev` affiche stdout) et dans le fichier journal de l'app (production).
+Côté Rust, tout passe par `tracing` (voir `init_logging()` dans `lib.rs`) : stdout en dev (`tauri dev`), plus un fichier journal quotidien (`waystone-overlay.log`) dans `app_log_dir()`, en dev comme en release. Réglages → App → **Export Logs** ouvre ce dossier dans l'explorateur — c'est le moyen de récupérer les logs d'un testeur pour diagnostiquer à distance (ex: le bug écran noir, KNOWN_ISSUES.md §1).
+
+**Règle de confidentialité** : le presse-papier peut contenir n'importe quoi de l'utilisateur (mot de passe, message perso), sans rapport avec le jeu — et ces logs sont maintenant exportables en un clic. Ne jamais logger de texte brut issu du presse-papier ou d'une saisie utilisateur ; seulement des métadonnées non-identifiantes (longueur, booléens, énums). Voir `logAnalyzeAttempt` dans `diagnostics.ts` (`clipLength`, pas `clipPreview`) pour le patron à suivre.
 
 ### Validation JSON
 
