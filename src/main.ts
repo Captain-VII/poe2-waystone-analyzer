@@ -240,12 +240,21 @@ const metaEditor = {
   validate: validateMetaFileOnDisk,
 };
 
+// mountOverlay's own setup (restoring the persisted settings tab) fires
+// onInteractiveChange synchronously, before the `overlay` const below is
+// assigned — reportRegions() referencing `overlay` at that point throws a
+// TDZ ReferenceError (surfaces as an unhandledrejection, since reportRegions
+// is async). Harmless to skip: applyEffectiveMode() reports the initial
+// regions again once overlay is ready anyway.
+let overlayReady = false;
 const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier], {
   isReduced: () =>
     loadReduceEffects() || matchMedia("(prefers-reduced-motion: reduce)").matches,
   onAnalyze: analyze,
   onHide: hideOverlay,
-  onInteractiveChange: () => void reportRegions(),
+  onInteractiveChange: () => {
+    if (overlayReady) void reportRegions();
+  },
   // Rust validates, swaps the three registrations (with rollback on
   // conflict), and persists — see lib.rs's set_hotkey_base. Only offered
   // inside the real overlay; plain-browser dev keeps a display-only row.
@@ -274,6 +283,7 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
       }
     : undefined,
 });
+overlayReady = true;
 
 async function reportRegions(): Promise<void> {
   await reportInteractiveRegions(overlay.interactiveEls());
