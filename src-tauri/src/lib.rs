@@ -534,9 +534,9 @@ fn log_frontend_report(report: String) {
 /// lets the Settings channel toggle take effect on the very next check, no
 /// restart needed.
 const STABLE_UPDATER_ENDPOINT: &str =
-    "https://github.com/Captain-VII/poe2-waystone-analyzer-v3/releases/download/updater/latest.json";
+    "https://github.com/Captain-VII/poe2-waystone-analyzer/releases/download/updater/latest.json";
 const BETA_UPDATER_ENDPOINT: &str =
-    "https://github.com/Captain-VII/poe2-waystone-analyzer-v3/releases/download/updater-beta/latest.json";
+    "https://github.com/Captain-VII/poe2-waystone-analyzer/releases/download/updater-beta/latest.json";
 
 #[derive(serde::Serialize)]
 struct UpdateInfo {
