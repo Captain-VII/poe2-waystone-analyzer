@@ -1,0 +1,7 @@
+[toolchain]
+# Pinned so a new stable Rust (new clippy lints, as 1.98 showed) never breaks
+# a release by surprise. Bump deliberately: change this, run cargo clippy,
+# fix, commit.
+channel = "1.98.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

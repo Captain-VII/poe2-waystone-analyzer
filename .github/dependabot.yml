@@ -1,0 +1,32 @@
+# Low-maintenance policy for a finished app: no stream of version-bump PRs.
+# npm and cargo get security fixes only (open-pull-requests-limit: 0 turns
+# off version updates; security updates still open, grouped into one PR per
+# ecosystem). GitHub Actions get one grouped PR a month, since deprecated
+# action versions eventually break CI on their own.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    groups:
+      cargo-security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

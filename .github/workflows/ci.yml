@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly run on main with no code change: catches what moves underneath an
+  # untouched app (runner images, WebView2, registries). A failure emails the
+  # repo owner.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   checks:
@@ -35,6 +41,9 @@ jobs:
         working-directory: src-tauri
     steps:
       - uses: actions/checkout@v5
+      # Installs the toolchain pinned in rust-toolchain.toml (before the
+      # cache, whose key hashes the rustc version).
+      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
