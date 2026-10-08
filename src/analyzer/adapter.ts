@@ -343,7 +343,7 @@ function buildTabletBreakdown(statFit: number, rewardScore: number): { label: st
  *  across every tablet, and (2026-07-10 rework, user report) no longer the
  *  tablet's own small 10-25% boost roll either. A tablet's mechanic
  *  identity comes from `tablet.tags` resolved to a `TABLET_LINKED_MECHANICS`
- *  entry — Overseer Precursor (`tags: ["general"]`) resolves to "General",
+ *  entry — Overseer (`tags: ["general"]`) resolves to "General",
  *  Breach/Ritual/Delirium/etc. resolve to their own name. Direct tag
  *  lookup, not a search for whichever of the 8 mechanics numerically scores
  *  highest — an argmax search was tried and discarded: it let e.g. a

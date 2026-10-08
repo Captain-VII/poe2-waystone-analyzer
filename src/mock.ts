@@ -37,7 +37,7 @@ const TABLETS: AnalysisResult["tablets"] = [
     verdict: "why-not",
     mechanic: "Abyss",
   },
-  { name: "Overseer Precursor Tablet", delta: 2.8, reason: "Matches General (30/100)", rating: "C", fit: 30, verdict: "why-not", mechanic: "General" },
+  { name: "Overseer Tablet", delta: 2.8, reason: "Matches General (30/100)", rating: "C", fit: 30, verdict: "why-not", mechanic: "General" },
 ];
 
 const MODIFIERS: AnalysisResult["modifiers"] = [

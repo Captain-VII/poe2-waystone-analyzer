@@ -313,6 +313,15 @@ concrete corrections came out of it:
   visible in the data-mined source too, but deliberately stay out of
   `mods` — that's `rewards.ts`'s job, unchanged by this pass.
 
+**Update (2026-10-08) — re-checked against current game data, closed for
+1.0:** `repoe-fork.github.io/poe2/base_items.json` (item class
+`TowerAugmentation`) still lists exactly the eight base types this app
+ships, all `released`. One correction: the game now calls the boss tablet
+**"Overseer Tablet"**, not "Overseer Precursor Tablet". Renamed everywhere;
+`canonicalTabletName` (`tablets.ts`) migrates the old name in meta.json and
+pinned tablets on load. `tablets.test.ts` now fails if a default tablet or
+a mechanic's `recommendedTablets` names anything outside the verified list.
+
 ## 3. Juice Score weights and Mechanic Match Score formula are a first pass
 
 The Juice Score's god-map references/weights (`src/analyzer/scoring.ts`'s
