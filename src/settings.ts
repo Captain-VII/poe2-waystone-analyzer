@@ -190,7 +190,7 @@ export function loadSessionHistory(): SessionHistoryEntry[] {
   }
 }
 
-export function saveSessionHistory(history: SessionHistoryEntry[]): void {
+function saveSessionHistory(history: SessionHistoryEntry[]): void {
   try {
     localStorage.setItem(KEYS.sessionHistory, JSON.stringify(history.slice(-MAX_HISTORY_ENTRIES)));
   } catch {

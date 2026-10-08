@@ -47,7 +47,7 @@ const CURRENCY_WEIGHT_UNIT = 3;
 // — its previously second-highest reward value made its tablet crowd the
 // top of the list regardless of the waystone's actual profile.
 // Filled from game data (data/game-data.json, mechanicValues).
-export const MECHANIC_VALUES: Record<string, number> = {};
+const MECHANIC_VALUES: Record<string, number> = {};
 
 onGameData((d) => {
   for (const k of Object.keys(MECHANIC_VALUES)) delete MECHANIC_VALUES[k];
