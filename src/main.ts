@@ -245,7 +245,9 @@ const overlay = mountOverlay(document.getElementById("app")!, MOCK_RESULTS[tier]
     loadReduceEffects() || matchMedia("(prefers-reduced-motion: reduce)").matches,
   onAnalyze: analyze,
   onHide: hideOverlay,
-  onInteractiveChange: () => void reportRegions(),
+  // mountOverlay fires this synchronously during mount, before `overlay` is
+  // assigned — defer so reportRegions never hits the TDZ.
+  onInteractiveChange: () => queueMicrotask(() => void reportRegions()),
   // Rust validates, swaps the three registrations (with rollback on
   // conflict), and persists — see lib.rs's set_hotkey_base. Only offered
   // inside the real overlay; plain-browser dev keeps a display-only row.
