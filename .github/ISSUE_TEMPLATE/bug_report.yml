@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in the overlay doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The log file is the most useful thing you can attach:
+        **Settings → App → Export Logs** opens the folder, attach the most recent `waystone-overlay.log.*` file.
+        Logs never contain your clipboard text.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in Settings → App (e.g. v1.0.0).
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: What kind of problem?
+      options:
+        - Overlay is black or invisible
+        - Ins / Ctrl+E does nothing or reads the wrong item
+        - Score or recommendation looks wrong
+        - Overlay in the wrong place / wrong screen
+        - Update or install problem
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: waystone
+    attributes:
+      label: Waystone text (if it's about a score)
+      description: Hover the waystone in game, Ctrl+C, paste here.
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log file
+      description: Drag the log file from Export Logs here.
+    validations:
+      required: true

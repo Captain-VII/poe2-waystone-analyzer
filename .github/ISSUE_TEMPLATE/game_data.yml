@@ -1,0 +1,28 @@
+name: Game data is outdated
+description: A mod isn't recognized, a danger is missed, or a tablet/stat range changed after a PoE2 patch.
+labels: [game-data]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Game data lives in `data/game-data.json` and reaches every player without an app update.
+        See `data/SOURCES.md` for how it's maintained.
+  - type: textarea
+    id: mod
+    attributes:
+      label: Exact mod text from the game
+      description: Copy the item (Ctrl+C in game) and paste the full text.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should the overlay do with it?
+      description: e.g. "this should be flagged as a danger", "this stat's max roll is now 80%".
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source (patch notes, poe2db, RePoE…)
