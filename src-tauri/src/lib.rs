@@ -183,7 +183,8 @@ fn show_window(window: tauri::WebviewWindow) -> Result<(), String> {
     tracing::debug!(target: "overlay", "show_window invoked by frontend (post-paint signal)");
     window.show().map_err(|e| e.to_string())?;
     startup_nudge_burst(&window);
-    schedule_startup_render_check(&window);
+    // ~250ms after the burst's last nudge (300+500+700ms), plus settle time.
+    schedule_render_check(&window, 1750, "startup");
     Ok(())
 }
 
@@ -387,43 +388,110 @@ fn check_render_health(window: tauri::WebviewWindow) -> Result<Option<bool>, Str
     }
 }
 
-/// Scheduled once, ~250ms after `startup_nudge_burst`'s last nudge
-/// (1500ms, plus its own settle time) — the first time this bug gets an actual
-/// pass/fail verdict instead of "the nudges fired" (proven insufficient
-/// evidence: the 2026-07-11 8-trial run showed identical Rust-side nudge
-/// logs on both visible and invisible runs). Diagnostic only for now,
-/// deliberately not wired to any new corrective action: the project's own
-/// trial log already burned one lesson on an untested escalation making
-/// things worse (trial #12, an immediate nudge racing the show itself) —
-/// this exists to gather real evidence for the next manual multi-launch
-/// session before deciding what, if anything, should react to it.
+/// How many hide/show recoveries `run_render_check` attempts on a
+/// confirmed black frame before giving up and leaving it to the player.
+const MAX_RENDER_RECOVERIES: u32 = 2;
+
+#[derive(Debug, PartialEq)]
+enum RenderOutcome {
+    /// Window was hidden by the time we looked: nothing to verify.
+    Skipped,
+    /// The capture itself failed: no verdict, never treated as blank.
+    NoVerdict,
+    /// Rendered fine, after this many recoveries (0 = fine from the start).
+    Fine(u32),
+    /// Still black after `MAX_RENDER_RECOVERIES` hide/show cycles.
+    GaveUp,
+}
+
+/// Decision loop for the black-frame check (KNOWN_ISSUES #1), kept free of
+/// GDI/window calls so it's unit-testable. A blank verdict must be
+/// confirmed by a second capture before anything reacts (a frame caught
+/// mid-fade or mid-resize is not the bug), and every capture first checks
+/// visibility: capturing a hidden window reads whatever is behind it (often
+/// a dark game scene), and "recovering" it would re-show an overlay the
+/// player just dismissed. Recovery is a hide/show cycle, the same action the
+/// reveal path already does; it only ever runs on a window already confirmed
+/// black, so it can't make a good frame worse.
+fn run_render_check(
+    mut capture: impl FnMut() -> Option<bool>,
+    is_visible: impl Fn() -> bool,
+    mut recover: impl FnMut(),
+    sleep_ms: impl Fn(u64),
+    recovery_enabled: bool,
+) -> RenderOutcome {
+    const CONFIRM_MS: u64 = 250;
+    let mut attempts = 0;
+    loop {
+        for confirming in [false, true] {
+            if confirming {
+                sleep_ms(CONFIRM_MS);
+            }
+            if !is_visible() {
+                return RenderOutcome::Skipped;
+            }
+            match capture() {
+                None => return RenderOutcome::NoVerdict,
+                Some(false) => return RenderOutcome::Fine(attempts),
+                Some(true) => {}
+            }
+        }
+        if !recovery_enabled || attempts >= MAX_RENDER_RECOVERIES {
+            return RenderOutcome::GaveUp;
+        }
+        attempts += 1;
+        recover();
+    }
+}
+
+/// Runs `run_render_check` against the real window `delay_ms` after a show
+/// (startup or Ins reveal). Bisectable via OVERLAY_RENDER_CHECK (the check
+/// itself) and OVERLAY_RENDER_RECOVERY (the hide/show reaction), both on by
+/// default.
 #[cfg(target_os = "windows")]
-fn schedule_startup_render_check(window: &tauri::WebviewWindow) {
+fn schedule_render_check(window: &tauri::WebviewWindow, delay_ms: u64, context: &'static str) {
     if !env_flag("OVERLAY_RENDER_CHECK", true) {
         return;
     }
     let handle = window.clone();
     thread::spawn(move || {
-        thread::sleep(Duration::from_millis(1750));
-        let Ok(hwnd) = handle.hwnd() else {
-            tracing::warn!(target: "overlay", "render-check: could not read hwnd, skipping");
-            return;
-        };
-        let raw: windows_sys::Win32::Foundation::HWND = hwnd.0;
-        match capture_window_is_blank(raw) {
-            Some(true) => {
-                tracing::warn!(target: "overlay", "render-check: window appears BLANK/BLACK (real OS capture)")
+        thread::sleep(Duration::from_millis(delay_ms));
+        let outcome = run_render_check(
+            || capture_window_is_blank(handle.hwnd().ok()?.0),
+            || handle.is_visible().unwrap_or(false),
+            || {
+                tracing::warn!(target: "overlay", context, "render-check: confirmed BLANK/BLACK, hide/show recovery");
+                let _ = handle.hide();
+                thread::sleep(Duration::from_millis(120));
+                let _ = handle.show();
+                restore_known_size(&handle);
+                thread::sleep(Duration::from_millis(600));
+            },
+            |ms| thread::sleep(Duration::from_millis(ms)),
+            env_flag("OVERLAY_RENDER_RECOVERY", true),
+        );
+        match outcome {
+            RenderOutcome::Fine(0) => {
+                tracing::info!(target: "overlay", context, "render-check: window renders fine (real OS capture)")
             }
-            Some(false) => {
-                tracing::info!(target: "overlay", "render-check: window renders fine (real OS capture)")
+            RenderOutcome::Fine(n) => {
+                tracing::warn!(target: "overlay", context, recoveries = n, "render-check: RECOVERED from black frame")
             }
-            None => tracing::warn!(target: "overlay", "render-check: capture failed, no verdict"),
+            RenderOutcome::GaveUp => {
+                tracing::error!(target: "overlay", context, "render-check: still BLANK/BLACK after recovery attempts")
+            }
+            RenderOutcome::NoVerdict => {
+                tracing::warn!(target: "overlay", context, "render-check: capture failed, no verdict")
+            }
+            RenderOutcome::Skipped => {
+                tracing::debug!(target: "overlay", context, "render-check: window hidden, skipped")
+            }
         }
     });
 }
 
 #[cfg(not(target_os = "windows"))]
-fn schedule_startup_render_check(_window: &tauri::WebviewWindow) {}
+fn schedule_render_check(_window: &tauri::WebviewWindow, _delay_ms: u64, _context: &'static str) {}
 
 /// Re-reveals the overlay after Escape/click-away/tray-hide — unlike
 /// `show_window` (startup-only), this nudges the surface since the black-
@@ -433,6 +501,9 @@ fn reveal_window(window: tauri::WebviewWindow) -> Result<(), String> {
     tracing::debug!(target: "overlay", "reveal_window invoked by frontend");
     window.show().map_err(|e| e.to_string())?;
     restore_known_size(&window);
+    // The black frame has also been seen right after un-hiding; 900ms lets
+    // the panel's own reveal transition finish before judging the frame.
+    schedule_render_check(&window, 900, "reveal");
     Ok(())
 }
 
@@ -1252,6 +1323,83 @@ mod tests {
             *px = [b, g, r, 255];
         }
         buf
+    }
+
+    /// Drives `run_render_check` with a scripted sequence of capture
+    /// verdicts; returns the outcome and how many recoveries ran.
+    fn render_check_with(
+        verdicts: &[Option<bool>],
+        visible: bool,
+        enabled: bool,
+    ) -> (RenderOutcome, u32) {
+        let mut seq = verdicts.iter().copied();
+        let mut recoveries = 0;
+        let outcome = run_render_check(
+            || seq.next().expect("capture called more often than scripted"),
+            || visible,
+            || recoveries += 1,
+            |_| {},
+            enabled,
+        );
+        (outcome, recoveries)
+    }
+
+    #[test]
+    fn render_check_fine_frame_needs_no_recovery() {
+        assert_eq!(
+            render_check_with(&[Some(false)], true, true),
+            (RenderOutcome::Fine(0), 0)
+        );
+    }
+
+    #[test]
+    fn render_check_transient_black_is_not_acted_on() {
+        assert_eq!(
+            render_check_with(&[Some(true), Some(false)], true, true),
+            (RenderOutcome::Fine(0), 0)
+        );
+    }
+
+    #[test]
+    fn render_check_confirmed_black_recovers() {
+        let verdicts = [Some(true), Some(true), Some(false)];
+        assert_eq!(
+            render_check_with(&verdicts, true, true),
+            (RenderOutcome::Fine(1), 1)
+        );
+    }
+
+    #[test]
+    fn render_check_gives_up_after_max_recoveries() {
+        let verdicts = [Some(true); 2 * (MAX_RENDER_RECOVERIES as usize + 1)];
+        assert_eq!(
+            render_check_with(&verdicts, true, true),
+            (RenderOutcome::GaveUp, MAX_RENDER_RECOVERIES)
+        );
+    }
+
+    #[test]
+    fn render_check_never_touches_a_hidden_window() {
+        assert_eq!(
+            render_check_with(&[], false, true),
+            (RenderOutcome::Skipped, 0)
+        );
+    }
+
+    #[test]
+    fn render_check_capture_failure_is_not_blank() {
+        assert_eq!(
+            render_check_with(&[Some(true), None], true, true),
+            (RenderOutcome::NoVerdict, 0)
+        );
+    }
+
+    #[test]
+    fn render_check_recovery_can_be_disabled() {
+        assert_eq!(
+            render_check_with(&[Some(true), Some(true)], true, false),
+            (RenderOutcome::GaveUp, 0)
+        );
     }
 
     #[test]
