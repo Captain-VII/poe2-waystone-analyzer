@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   release:
@@ -27,9 +28,13 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      # Restores the release-profile cache release-cache.yml saves from main.
+      # Never saves: a tag-scoped cache can't be read by any later tag.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          shared-key: release
+          save-if: false
       # A tag that doesn't match the manifests would ship an installer whose
       # embedded version disagrees with its release page — and the updater
       # feed compares versions, so the mismatch would confuse every install.
@@ -40,6 +45,23 @@ jobs:
           CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
           [ "v$PKG" = "$GITHUB_REF_NAME" ] && [ "$PKG" = "$CONF" ] || {
             echo "Tag $GITHUB_REF_NAME vs package.json $PKG vs tauri.conf.json $CONF mismatch"; exit 1; }
+      # A release must never ship from a commit whose checks were red. ci.yml
+      # already runs every check (incl. cargo test, clippy, visual) on each
+      # push to main, so wait for that run instead of recompiling the whole
+      # crate graph in debug just for cargo test.
+      - name: Guard - CI passed on this commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for i in $(seq 1 12); do
+            RUN=$(gh run list --workflow ci.yml --commit "$GITHUB_SHA" --event push --limit 1 --json databaseId -q '.[0].databaseId')
+            [ -n "$RUN" ] && break
+            sleep 10
+          done
+          [ -n "$RUN" ] || { echo "No ci.yml push run for $GITHUB_SHA: push the commit to main before tagging."; exit 1; }
+          gh run watch "$RUN" --exit-status --interval 30 > /dev/null || {
+            echo "ci.yml run $RUN did not succeed for $GITHUB_SHA: fix CI before tagging."; exit 1; }
       - run: npm ci
       # The release body = this version's CHANGELOG.md section (the same
       # text the in-app "Quoi de neuf" panel shows). Missing section fails
@@ -60,13 +82,8 @@ jobs:
             cat "$RUNNER_TEMP/release-notes.md"
             echo "NOTES_EOF"
           } >> "$GITHUB_ENV"
-      # Re-run the cheap checks here rather than depending on ci.yml —
-      # `needs:` can't cross workflow files, and a release must never ship
-      # from a commit whose checks were red.
       - run: npm run test
       - run: npm run verify-adapter
-      - run: cargo test
-        working-directory: src-tauri
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
