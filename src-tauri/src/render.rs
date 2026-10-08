@@ -48,7 +48,7 @@ pub(crate) fn restore_known_size(window: &tauri::WebviewWindow) {
 // below for the same lesson) — racing a resize against the window-show
 // itself made things worse, not better. But the black-frame race has also
 // been observed with NO nudge at all firing anywhere (trial #16,
-// docs/implementation-plan.md's M1 log: "invisible from the start again...
+// docs/history/implementation-plan.md's M1 log: "invisible from the start again...
 // nudge did not fire") — startup is the one path with no hover/reveal
 // transition to trigger the existing reactive nudges. `startup_nudge_burst`
 // below is the new angle: DELAYED nudges (not immediate), giving the
@@ -69,7 +69,7 @@ pub(crate) fn show_window(window: tauri::WebviewWindow) -> Result<(), String> {
 /// rather than immediate. Three nudges at increasing offsets (not just one)
 /// since the compositor race's exact timing is unknown; logged the same way
 /// as every other nudge in this file so the trial-log methodology
-/// (docs/implementation-plan.md M1) can track whether this one helps.
+/// (docs/history/implementation-plan.md M1) can track whether this one helps.
 pub(crate) fn startup_nudge_burst(window: &tauri::WebviewWindow) {
     if !env_flag("OVERLAY_STARTUP_NUDGE_BURST", true) {
         return;
@@ -86,7 +86,7 @@ pub(crate) fn startup_nudge_burst(window: &tauri::WebviewWindow) {
 
 /// Real OS-level screen capture of the window's own screen rect, checking
 /// whether it came back suspiciously solid-black — the one thing every
-/// diagnostic pass on the render-paint bug (docs/implementation-plan.md M1)
+/// diagnostic pass on the render-paint bug (docs/history/implementation-plan.md M1)
 /// couldn't do: every trial's own DOM/CSSOM report (`diagnostics.ts`) read
 /// identical whether the window was actually visible or black, because the
 /// page's own layout engine has no way to observe what the *compositor*

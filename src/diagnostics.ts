@@ -169,7 +169,7 @@ export async function showWhenPainted(): Promise<void> {
 
 /** Lightweight per-Ins checkpoint (unlike sendReport's full DOM dump) —
  *  confirms whether a real clipboard analysis was applied vs. left
- *  unchanged. See docs/release-checklist.md §3. Deliberately takes a
+ *  unchanged. See RELEASE.md §4. Deliberately takes a
  *  clipboard *length*, never the text itself: the clipboard can hold
  *  anything unrelated to the game (a password, a private message), and
  *  this now lands in a file the player can export from Settings — logging

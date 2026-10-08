@@ -9,6 +9,25 @@ ligne devient alors une puce du CHANGELOG, réécrite pour les joueurs. Une
 ligne = un item, avec référence vers [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
 quand elle existe.
 
+## Statut 1.0 (2026-10-08)
+
+Livré pour la 1.0 :
+- Écran noir : détection par capture réelle **et** récupération automatique
+  (KNOWN_ISSUES #1, cause externe, reste à confirmer en jeu).
+- Données de jeu dans `data/game-data.json`, mises à jour sans release
+  (récupérées sur `main` au démarrage, cache hors ligne).
+- Tablettes : uniquement les 8 types réels, vérifiés contre les données du
+  jeu (Overseer Tablet renommée, migration des réglages).
+- Tests unitaires du scoring et des mécaniques ; `lib.rs` découpé en modules.
+- Sécurité : CSP stricte, échappement HTML partagé.
+- Maintenance minimale : Rust figé, Dependabot sécurité seulement, CI
+  hebdomadaire, `npm run bump`, cache de release.
+
+Reste avant la 1.0 stable, côté joueur : test multi-écrans réel (ci-dessous)
+et une à deux semaines de jeu sur la release candidate.
+
+Hors 1.0 : tout ce qui est sous « Idées ».
+
 ## Priorités
 
 1. ✅ **Tests E2E du chemin presse-papier → score** — livré 2026-07-25

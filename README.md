@@ -1,125 +1,83 @@
-# Waystone Overlay
+# Waystone Analyzer
 
-[![Version](https://img.shields.io/badge/version-0.4.0-b8860b)](CHANGELOG.md)
+[![Latest release](https://img.shields.io/github/v/release/Captain-VII/poe2-waystone-analyzer?color=b8860b)](https://github.com/Captain-VII/poe2-waystone-analyzer/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)](#requirements)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-24c8db)](https://tauri.app)
 
-A small always-on-top overlay for **Path of Exile 2** that reads a Waystone
-you're hovering and tells you, at a glance, whether it's worth running and
-which tablet and Atlas Master to pair it with — without alt-tabbing out of
-the game.
+An in-game overlay for **Path of Exile 2**. Hover a Waystone, press **Ins**,
+and see at a glance whether it's worth running, which tablet to slot, and
+which Atlas Master fits, without alt-tabbing.
+
+![The overlay on a top-tier waystone](docs/images/overlay.png)
 
 ## Contents
 
-- [What it does](#what-it-does)
-- [Requirements](#requirements)
-- [Install](#install)
-- [Usage](#usage)
-  - [Reading the overlay](#reading-the-overlay)
-  - [How the Juice Score works](#how-the-juice-score-works)
-  - [Settings](#settings)
-  - [Tuning via meta.json](#tuning-via-metajson)
-- [Known issues](#known-issues)
-- [For developers](#for-developers)
+- [Quick start](#quick-start)
+- [Keys](#keys)
+- [Reading the overlay](#reading-the-overlay)
+- [How the Juice Score works](#how-the-juice-score-works)
+- [Settings](#settings)
+- [Customizing with meta.json](#customizing-with-metajson)
+- [Updates, game data and privacy](#updates-game-data-and-privacy)
+- [Troubleshooting](#troubleshooting)
+- [Reporting a problem](#reporting-a-problem)
 
-## What it does
+## Quick start
 
-Hover a Waystone in-game and press **Ins**. The overlay copies the item for
-you, scores it, and shows a three-column readout:
+1. Download `Waystone-Analyzer_<version>_x64-setup.exe` from the
+   [latest release](https://github.com/Captain-VII/poe2-waystone-analyzer/releases/latest).
+2. Run it. It installs for your user only, no admin rights. Windows may show
+   a SmartScreen warning because the installer isn't code-signed: click
+   **More info → Run anyway**.
+3. In game, hover a Waystone and press **Ins**.
 
-| Column | What's in it |
-|---|---|
-| **Recommended Tablets** | Every tablet ranked by fit %, each with a Run / Why not / Don't run verdict, plus the **Atlas Master** to run for the winning mechanic |
-| **Heat Breakdown** | The **Juice Score** (0-100) with its tier badge, the five stats behind it as fill bars, and Total Heat |
-| **Insights** | Every danger mod found, most dangerous first, plus a **Bonus** row of icons for the waystone's strengths |
+### Requirements
 
-A **Juicy** find (top tier) also fires a native OS notification and a short
-chime, in case you're mid-fight and miss it.
+- Windows 10 or 11
+- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/),
+  already present on almost every Windows install. If the overlay never
+  appears, install it.
 
-The overlay is click-through everywhere except its own buttons, so it never
-blocks a click into the game underneath.
+## Keys
 
-## Requirements
-
-- Windows 10/11
-- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) —
-  usually already installed on modern Windows; if the overlay won't launch,
-  install this first.
-
-## Install
-
-Grab the installer from the [latest release](https://github.com/Captain-VII/poe2-waystone-analyzer-v3/releases),
-or build one yourself with `npm run tauri:build` (lands in
-`src-tauri/target/release/bundle/nsis/`). It installs per-user — no admin
-rights needed — and adds a Start Menu shortcut.
-
-The app updates itself: it checks on launch and offers to install a new
-version when one ships. **Settings → Check for updates** does it on demand.
-
-To uninstall, use **Settings → Apps** and remove "waystone-overlay" like any
-other app.
-
-## Usage
-
-| Key | Action | Scope |
+| Key | Action | Works |
 |---|---|---|
-| **Ins** | Analyze the Waystone you're hovering (auto-copies it first) | Global |
-| **Ctrl+E** | Also analyzes — fixed, works no matter what the base key is remapped to | Global |
-| **Escape** | Minimize the overlay to the tray | Only when the overlay has focus |
+| **Ins** | Copy the hovered Waystone and analyze it | Anywhere, including in game |
+| **Ctrl+E** | Same as Ins, always available even if you remap Ins | Anywhere |
+| **Escape** | Hide the overlay | When the overlay has focus |
 
-The two analyze keys are **global shortcuts** — they work while the game has
-focus. Escape deliberately isn't: grabbing it globally swallowed the key
-OS-wide, including inside the game. Whatever was on your clipboard before
-analyzing is restored afterward.
+Your clipboard is restored after each analysis. **Ins** can be remapped in
+Settings → Overlay → Hotkey (click it, press the new key). Clicking anywhere
+in the game hides the overlay; the **pin** button keeps it open.
 
-The base key (Ins) is remappable: open Settings (gear button), click the
-**Hotkey** binding, then press the new key. Escape cancels the capture. The
-choice persists across restarts (`hotkey.txt` in the app config dir, next to
-`meta.json`). Ctrl+E is separate and always stays on analyze.
+The overlay sits top-right. Drag its title bar to move it; the position is
+remembered. Settings → Overlay → **Position → Reset** puts it back.
 
-The overlay defaults to the top-right corner, but you can **drag it** by its
-title bar to wherever fits your HUD — the new position is remembered. A
-display or resolution change re-anchors it top-right so it can never end up
-off-screen; **Settings → Position → Reset** does the same on demand.
+## Reading the overlay
 
-The **pin** button keeps the overlay open when you click elsewhere, and the
-**copy** button puts a text summary of the current analysis on your
-clipboard.
+| Column | What it shows |
+|---|---|
+| **Recommended Tablets** | Every tablet ranked by how well it fits this waystone, with a Run / Why not / Don't run verdict, and the **Atlas Master** for the winning mechanic |
+| **Heat Breakdown** | The **Juice Score** (0-100) and its tier badge, the five stats behind it, and Total Heat |
+| **Insights** | Every dangerous mod, most dangerous first, and a **Bonus** row of icons for the waystone's strengths |
 
-### Reading the overlay
+- **Tier badge**: `WEAK` → `AVERAGE` → `GOOD` → `EXCELLENT` → `JUICY ✦`, at
+  20 / 40 / 60 / 80. A letter (S/A/B/C/D) next to Total Heat uses the same
+  bands. A Juicy find also plays a chime and shows a Windows notification.
+- **Verdict**: **Skip** under 20, **Keep** at 50+ on a tier 3+ waystone
+  (hold it for a good tablet), **Run** otherwise.
+- **Stat bars**: each stat against its own realistic maximum, so +60% Drop
+  Chance (which rolls up to ~155%) looks smaller than +60% Pack Size (~65%).
+- **Danger level** (`Safe` / `Manageable` / `Dangerous` / `Very Dangerous`)
+  comes from the danger mods only, never from the score. A map can be Juicy
+  and Very Dangerous at once: that's for you to judge.
 
-- **Juice Score** — a 0-100 number answering "how good is the best thing I
-  can do with this map?". See [below](#how-the-juice-score-works) for
-  exactly how it's built.
-- **Tier badge** — `WEAK` → `AVERAGE` → `GOOD` → `EXCELLENT` → `JUICY ✦`,
-  on the 20 / 40 / 60 / 80 score boundaries. A letter rating (S/A/B/C/D)
-  sits next to Total Heat on the same bands.
-- **Verdict** — **Skip** (score under 20), **Keep** (score 50+ on a Tier 3+
-  Waystone — worth holding for a good tablet rather than running now), or
-  **Run** for everything else worth playing.
-- **Heat Breakdown bars** — each of the five stats against its own
-  realistic ceiling, so a +60% Waystone Drop Chance (ceiling 155%) reads
-  smaller than a +60% Pack Size (ceiling 65%). Drop Chance simply rolls
-  much higher than the rest.
-- **Insights** — every detected danger mod, sorted most dangerous first and
-  grouped into high (red) / Medium (gold) / Low (grey). The **danger level**
-  next to the heading (`Safe` / `Manageable` / `Dangerous` /
-  `Very Dangerous`) is derived from those mods **only, never from the
-  score** — a map can be Juicy and Very Dangerous at the same time. That's
-  information, not a bug.
-- **Bonus row** — icons for the waystone's strengths (a dominant stat, a
-  strong mechanic match, reward-carrying tablets). Hover any icon for the
-  full text.
+The **?** button opens an in-app guide with the same explanations.
 
-An in-app **Guide** (the `?` button) explains all of this from the player's
-side, and is kept in sync with the real logic.
+## How the Juice Score works
 
-### How the Juice Score works
-
-The score is your **best-fitting real league mechanic's fit** — not a
-separate map-wide number.
-
-Each mechanic cares about exactly one stat, its **priority stat**:
+The score is the fit of your **best real league mechanic** for this
+waystone. Each mechanic cares about one stat:
 
 | Mechanic | Priority stat |
 |---|---|
@@ -129,202 +87,100 @@ Each mechanic cares about exactly one stat, its **priority stat**:
 | Ritual, Abyss | Monster Rarity |
 | Temple | Item Rarity |
 
-That roll is tiered on its own — under 15% Weak, 15-25% OK, 25-50% Top,
-50%+ Legendary — and **the tier is the base score**: 10, 25, 55 or 80.
-On top of it come the waystone's modifier count (up to +8 at 8 mods), a +10
-bonus if the tablet is one of that mechanic's curated picks, and the
-tablet's own reward value (Splinters, Artifacts, and such). The last two
-only apply once the waystone is at least "OK" for the mechanic — a weak
-roll can't be rescued by a rich tablet.
+That roll sets the base: under 15% Weak (10), 15-25% OK (25), 25-50% Top
+(55), 50%+ Legendary (80). On top come up to +8 for the number of mods, +10
+when the tablet is one of the mechanic's recommended picks, and the tablet's
+own reward value (Splinters, Artifacts...). The last two only count once the
+waystone is at least OK for that mechanic, so a rich tablet can't rescue a
+bad roll.
 
-Two consequences worth knowing:
+- One great roll carries the score instead of being averaged down by weak
+  lines.
+- Overseer and Irradiated aren't league encounters: they're shown under
+  "Other" but never drive the score or the Atlas Master pick.
+- **Danger never lowers the score.** It measures loot potential; whether a
+  Reflect map is worth it is your call.
 
-- **One great roll carries the score** instead of being averaged down by
-  four mediocre lines. That's deliberate — it replaced an earlier
-  weighted-sum model that buried genuinely strong waystones.
-- **Overseer and Irradiated never count.** They aren't real league-encounter
-  mechanics; their fit still shows in the "Other" box below the main list,
-  but only Breach / Ritual / Delirium / Expedition / Abyss / Temple can
-  drive the Juice Score or the Atlas Master pick.
-
-**Item Quantity** is parsed but deliberately excluded from the score itself
-— it skewed results when weighted in. It still drives Expedition's fit,
-where it genuinely predicts profit.
-
-**Danger mods never lower the score.** The Juice Score measures loot
-potential only; whether a Reflect map is worth the risk is your call, so
-danger is reported alongside instead of baked in.
-
-### Settings
+## Settings
 
 The gear button opens four tabs:
 
-- **Overlay** — Insights toggle, Reduce Effects, **Overlay Opacity** and
-  **Overlay Scale**, hotkey remap, and **Position → Reset** (re-anchor
-  top-right).
-- **Session** — waystones analyzed, average score and best find for the
-  current session, plus **History**: every past session archived, with
-  **Export CSV** to the clipboard for Excel/Sheets.
-- **Meta** — the in-app editor described below, plus **Validate meta.json**
-  (reports the exact parse error, with line and column).
-- **App** — **Launch with Windows** (registry Run key, no elevation),
-  **Start minimized**, version, **Beta channel** opt-in, **Check for
-  updates**, patch notes, and **Hide Overlay**.
+- **Overlay**: show/hide Insights, reduce effects, opacity, scale, hotkey,
+  position reset.
+- **Session**: waystones analyzed, average and best score this session,
+  history of past sessions, **Export CSV**.
+- **Meta**: tune each mechanic and enable/disable tablets (see below).
+- **App**: launch with Windows, start minimized, version, **Beta channel**,
+  check for updates, patch notes, **Export Logs**.
 
-### Tuning via meta.json
+## Customizing with meta.json
 
-> `meta.json` controls mechanics, tablets, rewards, and enable/disable
-> flags. It does **not** contain the score formula itself — the tier
-> boundaries and bonuses live in `src/analyzer/`.
+Most tuning is in **Settings → Meta**: each mechanic's priority stat and
+skip threshold, and which tablets are enabled. Clicking a tablet row opens
+the same editor for that mechanic. Changes apply immediately; **Reset**
+returns to defaults.
 
-An editable `meta.json` lives in the app's config directory, seeded on first
-run from `src-tauri/default-meta.json` (which ships empty — every default
-comes from code).
-
-**Most of it is editable in-app**: Settings' **Meta** section covers each
-mechanic's priority stat and skip threshold, plus enabling/disabling
-tablets — dropdowns, no typo risk, immediate effect, and a reset button.
-Clicking any tablet row in Full mode opens the same editor scoped to that
-one mechanic. The editor writes only values that differ from the built-in
-defaults and preserves anything else you hand-wrote (custom tablets,
-`recommendedTablets`, unknown keys).
-
-Hand-edits made outside the app are picked up automatically — the file is
-watched, and a save reloads your customizations without a restart (the
-displayed result isn't re-scored; your next analysis uses them). **Meta →
-Validate meta.json** reports the exact parse error, with line and column,
-if a hand-edit breaks the JSON.
-
-Hand-editing remains the way to add custom tablets. Add an entry to the
-`"tablets"` array with its mods as plain PoE2-style text — the same tolerant
-parser used for waystones reads them, and the tablet is ranked against every
-mechanic automatically:
+Everything is saved in `meta.json`
+(`%APPDATA%\me.dorian.waystone-overlay\meta.json`), which you can also edit
+by hand; the app reloads it on save. **Validate meta.json** points to the
+exact line of a JSON mistake. Hand-editing is how you add a custom tablet:
 
 ```json
 {
-  "metas": { },
   "tablets": [
     {
-      "name": "Legion Tablet",
+      "name": "My Tablet",
       "mods": ["40% increased Pack Size", "20% increased Monster Rarity"],
-      "tags": ["legion"]
+      "tags": ["delirium"]
     },
     { "name": "Ritual Tablet", "enabled": false }
   ]
 }
 ```
 
-An entry whose `name` matches a bundled default (case-insensitive) overrides
-that default; any other name is added as a new tablet. `"enabled": false`
-hides a tablet without deleting its definition — no `mods` needed for that.
+A `name` matching a built-in tablet (case-insensitive) overrides it; any
+other name adds a tablet. `mods` use the game's own wording. A tablet can
+also carry `rewards` for value the stats can't express:
+`{ "type": "mechanic", "id": "delirium", "value": 9 }`,
+`{ "type": "currency", "id": "simulacrum_splinter", "weight": 3 }`, or
+`{ "type": "generic", "score": 5 }`.
 
-A tablet can declare how reliable its data is — informational only today,
-not used in scoring:
+## Updates, game data and privacy
 
-```json
-{ "name": "Legion Tablet", "mods": [], "confidence": "low", "source": "manual" }
-```
+- **App updates**: the app checks at launch and offers new versions; you
+  choose when to install. Settings → App → **Check for updates** does it on
+  demand. The **Beta channel** opts into pre-releases.
+- **Game data** (stat ranges, mod wording, tablets) is also refreshed at
+  launch from this repository, so a game patch can be handled without a new
+  app version. If it can't be reached, the app uses what it already has.
+- **Privacy**: the app only contacts GitHub, for those two checks. There is
+  no telemetry. Logs stay on your PC and never contain your clipboard text.
 
-`confidence` is `"high"` / `"medium"` / `"low"`; `source` is `"wiki"`,
-`"poe2db"` (data-mined — confirms the item exists, not necessarily exact
-wording), `"community"` (single unconfirmed source), or `"manual"`.
+## Troubleshooting
 
-**Rewards** (optional) let a tablet's ranking reflect value the generic
-stats can't express — real mechanic currency, mainly, since PoE2's actual
-Breach/Expedition/Delirium/Ritual/Abyss tablets mostly grant
-Splinters/Artifacts/Tribute rather than boosting stats:
+**The overlay is black or invisible.** A rare Windows graphics glitch
+(WebView2 / GPU driver). The app now detects it and redraws the window by
+itself. If it persists: move the mouse over the overlay and away, update
+your GPU driver and WebView2, then [report it](#reporting-a-problem) with
+your logs. Details in [KNOWN_ISSUES.md](KNOWN_ISSUES.md#1-overlay-occasionally-renders-black-or-invisible-unresolved).
 
-```json
-{
-  "name": "Delirium Tablet",
-  "mods": ["20% increased Pack Size"],
-  "rewards": [
-    { "type": "mechanic", "id": "delirium", "value": 9 },
-    { "type": "currency", "id": "simulacrum_splinter", "weight": 3 }
-  ]
-}
-```
+**Ins does nothing.** Make sure the game window has focus and that no other
+tool uses the same key; remap it in Settings if needed. Ctrl+E always works.
 
-Three shapes: `"mechanic"` (looked up in `src/analyzer/rewards.ts`'s
-`MECHANIC_VALUES` first, so tablets citing the same mechanic stay
-consistent, falling back to this entry's `value`), `"currency"` (`weight`
-scaled by one shared multiplier), and `"generic"` (`score` directly). A
-tablet without `"rewards"` is ranked purely on stats.
+**"Not a Waystone".** Ins only reads Waystones: the item under your mouse
+when you press it wasn't one. The previous result stays on screen.
 
-## Known issues
+**Uninstall.** Windows Settings → Apps → **Waystone-Analyzer**. Your
+settings are kept for a reinstall; to remove everything, also delete
+`%APPDATA%\me.dorian.waystone-overlay` and
+`%LOCALAPPDATA%\me.dorian.waystone-overlay`.
 
-See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) — most importantly, the overlay can
-occasionally render as a black or invisible rectangle. This is a known,
-unresolved WebView2/graphics-driver compositor issue, not something a
-restart of the game fixes. Read that file before reporting it as a new bug.
+## Reporting a problem
 
-## For developers
+1. Settings → App → **Export Logs** opens the log folder.
+2. [Open an issue](https://github.com/Captain-VII/poe2-waystone-analyzer/issues/new/choose)
+   and attach the most recent `waystone-overlay.log.*` file.
+3. For a wrong score, paste the waystone text (Ctrl+C on it in game).
 
-### Tech stack
-
-Tauri 2 (Rust backend, native window/tray/notifications/global hotkeys)
-wrapping a Vite + TypeScript frontend — no UI framework, plain DOM. Vitest
-for tests, ESLint for linting.
-
-### Docs
-
-- [`docs/overlay-ui-spec.md`](docs/overlay-ui-spec.md) — the locked
-  visual/behavioral spec (dimensions, colors, animations, data contract).
-- [`docs/implementation-plan.md`](docs/implementation-plan.md) —
-  milestone-by-milestone build log, including the full compositor-bug
-  investigation.
-- [`docs/release-checklist.md`](docs/release-checklist.md) — what to verify
-  before shipping.
-- [`CHANGELOG.md`](CHANGELOG.md) — player-facing release notes (embedded in
-  the app's "What's new" panel). [`ROADMAP.md`](ROADMAP.md) is its
-  forward-looking counterpart.
-
-### Build requirements
-
-- [Node.js](https://nodejs.org/) 20+ and npm
-- [Rust](https://www.rust-lang.org/tools/install) (stable) + Cargo
-- [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
-  (usually preinstalled) + the "Desktop development with C++" workload from
-  Visual Studio Build Tools
-
-### Setup
-
-```bash
-git clone https://github.com/Captain-VII/poe2-waystone-analyzer-v3.git
-cd poe2-waystone-analyzer-v3
-npm install
-```
-
-### Dev
-
-```bash
-npm run tauri:dev
-```
-
-Runs the full app — Tauri window, Rust backend, hot reload. `npm run dev`
-starts the frontend alone in a browser at `localhost:5173`, useful for CSS
-work (it renders mock fixtures, since there's no clipboard bridge).
-
-Set `OVERLAY_DEBUG=1` to show a small corner readout of each analysis —
-parsed mod count, score, and parse+render time — for iterating on the
-scoring formulas without restarting or reading logs. Several other
-`OVERLAY_*` flags bisect window-creation behaviour while chasing the
-black-screen bug; they're listed in `src-tauri/src/lib.rs`'s `env_flag`
-call sites.
-
-### Build and test
-
-```bash
-npm run build           # type-check + frontend production build (dist/)
-npm run tauri:build     # release installer (src-tauri/target/release/bundle/)
-npm test                # unit tests (Vitest)
-npm run verify-adapter  # contract-tests the scoring/parsing pipeline
-npm run lint            # ESLint
-```
-
-### Releasing
-
-Push a version tag and CI builds, signs, and publishes the installer, then
-refreshes the updater feed the app polls. The version lives in three files
-that must agree: `package.json`, `src-tauri/Cargo.toml`, and
-`src-tauri/tauri.conf.json`.
+Known limitations are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+Building from source and contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
