@@ -1,4 +1,9 @@
-use std::{env, fs, sync::Mutex, thread, time::Duration};
+use std::{
+    env, fs,
+    sync::{Mutex, PoisonError},
+    thread,
+    time::Duration,
+};
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -112,7 +117,7 @@ struct InteractiveRects(Mutex<Vec<Rect>>);
 
 #[tauri::command]
 fn set_interactive_rects(state: tauri::State<'_, InteractiveRects>, rects: Vec<Rect>) {
-    *state.0.lock().unwrap() = rects;
+    *state.0.lock().unwrap_or_else(PoisonError::into_inner) = rects;
 }
 
 /// Header's pin toggle — when true, the click-through poll loop's
@@ -124,7 +129,7 @@ struct PinState(Mutex<bool>);
 
 #[tauri::command]
 fn set_pinned(state: tauri::State<'_, PinState>, pinned: bool) {
-    *state.0.lock().unwrap() = pinned;
+    *state.0.lock().unwrap_or_else(PoisonError::into_inner) = pinned;
 }
 
 /// Defensive recompose nudge against the intermittent WebView2/
@@ -652,7 +657,7 @@ async fn check_update_channel(
         version: u.version.clone(),
         notes: u.body.clone(),
     });
-    *state.0.lock().unwrap() = update;
+    *state.0.lock().unwrap_or_else(PoisonError::into_inner) = update;
     Ok(info)
 }
 
@@ -669,7 +674,7 @@ async fn install_pending_update(
     let update = state
         .0
         .lock()
-        .unwrap()
+        .unwrap_or_else(PoisonError::into_inner)
         .take()
         .ok_or_else(|| "no pending update — call check_update_channel first".to_string())?;
     let mut got: usize = 0;
@@ -962,7 +967,11 @@ fn load_hotkey_base(app: &tauri::AppHandle) -> String {
 
 #[tauri::command]
 fn get_hotkey_base(state: tauri::State<'_, HotkeyBase>) -> String {
-    state.0.lock().unwrap().clone()
+    state
+        .0
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone()
 }
 
 /// Remaps the base key: unregisters the old pair, registers the new one,
@@ -979,7 +988,11 @@ fn set_hotkey_base(
 ) -> Result<String, String> {
     let base = base.trim().to_string();
     validate_hotkey_base(&base)?;
-    let old = state.0.lock().unwrap().clone();
+    let old = state
+        .0
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone();
     if old == base {
         return Ok(base);
     }
@@ -1003,7 +1016,7 @@ fn set_hotkey_base(
             }
         }
     }
-    *state.0.lock().unwrap() = base.clone();
+    *state.0.lock().unwrap_or_else(PoisonError::into_inner) = base.clone();
     persist_hotkey_base(&app, &base);
     tracing::info!(target: "hotkey", from = %old, to = %base, "base remapped");
     Ok(base)
@@ -1035,7 +1048,12 @@ fn register_hotkeys(app: &tauri::AppHandle, base: &str) {
             // A remap (set_hotkey_base) may have landed while waiting —
             // don't resurrect accelerators for a base the user replaced.
             // EXTRA_HOTKEYS is always live regardless of base.
-            let current = handle.state::<HotkeyBase>().0.lock().unwrap().clone();
+            let current = handle
+                .state::<HotkeyBase>()
+                .0
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .clone();
             let live: Vec<String> = all_accels(&current).into_iter().map(|(a, _)| a).collect();
             pending.retain(|a| live.contains(a));
             pending.retain(
@@ -1068,7 +1086,7 @@ pub fn run() {
                     // Compare parsed Shortcuts, not display strings — the
                     // plugin's to_string() normalization isn't a stable
                     // format to match against.
-                    let base = app.state::<HotkeyBase>().0.lock().unwrap().clone();
+                    let base = app.state::<HotkeyBase>().0.lock().unwrap_or_else(PoisonError::into_inner).clone();
                     let action = all_accels(&base)
                         .into_iter()
                         .find(|(accel, _)| accel.parse::<Shortcut>().is_ok_and(|s| s == *shortcut))
@@ -1206,7 +1224,7 @@ pub fn run() {
                             .state::<InteractiveRects>()
                             .0
                             .lock()
-                            .unwrap()
+                            .unwrap_or_else(PoisonError::into_inner)
                             .clone();
                         let inside = match handle.cursor_position() {
                             Ok(c) if !rects.is_empty() => rects.iter().any(|&(x, y, w, h)| {
@@ -1249,7 +1267,7 @@ pub fn run() {
                         // over gameplay until the player deliberately re-checks with Ins
                         // (see reveal_window / hotkeys.ts's Insert handler). Skipped
                         // entirely when the header's pin toggle is on (PinState).
-                        let pinned = *handle.state::<PinState>().0.lock().unwrap();
+                        let pinned = *handle.state::<PinState>().0.lock().unwrap_or_else(PoisonError::into_inner);
                         if left_click_since_last_poll() && !inside && !pinned {
                             let _ = handle.hide();
                         }
@@ -1283,7 +1301,7 @@ pub fn run() {
                         // Flush the last buffered log lines before app.exit() —
                         // see LogGuard's doc comment for why Drop alone can't be
                         // relied on here.
-                        if let Some(guard) = app.state::<LogGuard>().lock().unwrap().take() {
+                        if let Some(guard) = app.state::<LogGuard>().lock().unwrap_or_else(PoisonError::into_inner).take() {
                             drop(guard);
                         }
                         app.exit(0);
