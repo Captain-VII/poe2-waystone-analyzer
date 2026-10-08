@@ -7,6 +7,10 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 0.7.0-beta.2
+
+- **New app identity.** The overlay is now published as Captain-VII and stores its data in a new folder. Your settings, history, pinned tablets, hotkey and meta.json are moved over automatically on first launch.
+
 ## 0.7.0-beta.1
 
 - **Black or invisible overlay now fixes itself.** The overlay checks what is really on screen after it appears, and redraws itself if the window came up black.
