@@ -7,6 +7,13 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 0.7.0-beta.1
+
+- **Black or invisible overlay now fixes itself.** The overlay checks what is really on screen after it appears, and redraws itself if the window came up black.
+- **Game data updates without an app update.** Mod wording, stat ranges and tablets are refreshed from the internet at launch, so a game patch can be handled right away. Offline, the overlay keeps using what it already has.
+- **"Overseer Precursor Tablet" is now "Overseer Tablet"**, matching the game. Your tablet settings and pins carry over.
+- **More reliable under the hood:** many new automated checks on scoring and danger detection, and a sturdier background process.
+
 ## 0.6.0-beta.4
 
 - **Security hardening:** the overlay now only runs its own code, and custom tablet names from your meta file are displayed as plain text.
