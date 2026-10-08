@@ -70,6 +70,17 @@ window.addEventListener("error", (e) => {
 window.addEventListener("unhandledrejection", (e) => {
   capturedErrors.push(`unhandledrejection: ${e.reason}`);
 });
+// CSP (tauri.conf.json) blocks silently — ship each violation straight to
+// the log file so a too-strict directive shows up in Export Logs, not as a
+// mysteriously missing icon or style.
+window.addEventListener("securitypolicyviolation", (e) => {
+  const violation = `${e.effectiveDirective} blocked ${e.blockedURI || "inline"} @ ${e.sourceFile}:${e.lineNumber}`;
+  capturedErrors.push(`csp: ${violation}`);
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  void import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke("log_frontend_report", { report: JSON.stringify({ tag: "csp-violation", violation }) }))
+    .catch(() => {});
+});
 
 /** Lets modules outside diagnostics.ts (e.g. placement.ts's monitor-fallback
  *  logging) report a failed invoke() into the same errors list every report
