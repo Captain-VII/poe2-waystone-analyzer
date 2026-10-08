@@ -89,6 +89,16 @@ export function reportDiagnosticError(message: string): void {
   capturedErrors.push(message);
 }
 
+/** One line per game-data load attempt (cache at startup, then the remote
+ *  copy), so Export Logs shows which data revision a session scored with. */
+export async function logGameData(source: "cache" | "remote", outcome: object): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("log_frontend_report", {
+    report: JSON.stringify({ tag: "game-data", source, ...outcome }),
+  }).catch((e) => reportDiagnosticError(`logGameData failed: ${e}`));
+}
+
 export async function runDiagnostics(): Promise<{ debugOpaque: boolean }> {
   if (!("__TAURI_INTERNALS__" in window)) {
     console.log("[diag] not running under Tauri (plain browser) — skipping window/invoke checks");

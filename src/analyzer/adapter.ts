@@ -12,7 +12,7 @@ import {
   dangerHitsToWarnings,
   detectDangerHits,
   evaluateMap,
-  DEFAULT_THRESHOLD,
+  skipThreshold,
   STAT_REFERENCES,
   DANGER_SEVERITY_ORDER,
   type DangerHit,
@@ -145,7 +145,7 @@ function scoreToRating(score: number): Rating {
  *  the "high tier" signal for Keep — waystones tier III+ worth keeping
  *  for a good tablet rather than running immediately. */
 function classifyVerdict(score: number, tier: number): Verdict {
-  if (score < DEFAULT_THRESHOLD) return "SKIP";
+  if (score < skipThreshold()) return "SKIP";
   if (score >= 50 && tier >= 3) return "KEEP";
   return "RUN";
 }
@@ -547,7 +547,7 @@ export function analyzeWaystoneText(text: string): AnalysisResult | null {
   };
 }
 
-export { DEFAULT_THRESHOLD, STAT_REFERENCES };
+export { skipThreshold, STAT_REFERENCES };
 // Re-exported for verify-adapter.mjs's dominant-stat unit tests only — the
 // main Juice Score (heat.score) reads the best tablet fit now, not this
 // directly, so those tests parse a sample's stats and call

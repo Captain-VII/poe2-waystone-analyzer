@@ -19,7 +19,7 @@
         "script-src": "'self'",
         "style-src": "'self' 'unsafe-inline'",
         "img-src": "'self' data:",
-        "connect-src": "ipc: http://ipc.localhost",
+        "connect-src": "ipc: http://ipc.localhost https://raw.githubusercontent.com",
         "object-src": "'none'",
         "base-uri": "'none'",
         "form-action": "'none'"
@@ -29,7 +29,7 @@
         "script-src": "'self'",
         "style-src": "'self' 'unsafe-inline'",
         "img-src": "'self' data:",
-        "connect-src": "ipc: http://ipc.localhost ws://localhost:5173",
+        "connect-src": "ipc: http://ipc.localhost https://raw.githubusercontent.com ws://localhost:5173",
         "object-src": "'none'",
         "base-uri": "'none'",
         "form-action": "'none'"

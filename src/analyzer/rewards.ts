@@ -8,6 +8,8 @@
  *  `rewards` gives a tablet a second, independent scoring channel for that
  *  value, without touching `StatKey`/`mod-parser.ts`/`scoring.ts` at all. */
 
+import { onGameData } from "./game-data";
+
 export type Reward =
   | { type: "currency"; id: string; weight: number }
   | { type: "mechanic"; id: string; value: number }
@@ -44,15 +46,13 @@ const CURRENCY_WEIGHT_UNIT = 3;
 // it's now a *secondary* mechanic (see adapter.ts's PRIMARY_MECHANIC_TAGS)
 // — its previously second-highest reward value made its tablet crowd the
 // top of the list regardless of the waystone's actual profile.
-export const MECHANIC_VALUES: Record<string, number> = {
-  delirium: 10,
-  breach: 7,
-  abyss: 7,
-  irradiated: 6,
-  expedition: 5,
-  ritual: 5,
-  temple: 5,
-};
+// Filled from game data (data/game-data.json, mechanicValues).
+export const MECHANIC_VALUES: Record<string, number> = {};
+
+onGameData((d) => {
+  for (const k of Object.keys(MECHANIC_VALUES)) delete MECHANIC_VALUES[k];
+  Object.assign(MECHANIC_VALUES, d.mechanicValues);
+});
 
 const DEFAULT_MECHANIC_VALUE = 5;
 

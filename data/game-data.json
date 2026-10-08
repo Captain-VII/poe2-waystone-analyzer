@@ -1,0 +1,456 @@
+{
+  "schema": 1,
+  "revision": 1,
+  "scoring": {
+    "statReferences": {
+      "itemRarity": 100,
+      "monsterRarity": 105,
+      "packSize": 65,
+      "monsterEffectiveness": 70,
+      "waystoneDropChance": 155
+    },
+    "dominantLegendaryOverride": {
+      "waystoneDropChance": 70
+    },
+    "secondaryBonusCap": 5,
+    "skipThreshold": 20
+  },
+  "dangerPatterns": [
+    {
+      "id": "reflect-damage",
+      "label": "Reflect Damage",
+      "severity": "reflect",
+      "pattern": "reflect(?:s|ed)?\\b[^\\n]{0,30}?damage"
+    },
+    {
+      "id": "cannot-leech",
+      "label": "Cannot Leech",
+      "severity": "strong",
+      "pattern": "cannot\\s+leech"
+    },
+    {
+      "id": "no-regeneration",
+      "label": "No Regeneration",
+      "severity": "strong",
+      "pattern": "(?:no|cannot)\\s+[^\\n]{0,30}?regenerat"
+    },
+    {
+      "id": "reduced-recovery",
+      "label": "Reduced Recovery",
+      "severity": "moderate",
+      "pattern": "(?:reduced|less)\\s+[^\\n]{0,30}?recovery"
+    },
+    {
+      "id": "reduced-regeneration",
+      "label": "Reduced Regeneration",
+      "severity": "moderate",
+      "pattern": "less\\s+.*regenerat"
+    },
+    {
+      "id": "avoid-ailments",
+      "label": "Avoid Ailments",
+      "severity": "moderate",
+      "pattern": "avoid(?:s|ed)?\\s+.*ailments?"
+    },
+    {
+      "id": "reduced-action-speed",
+      "label": "Reduced Action Speed",
+      "severity": "moderate",
+      "pattern": "(?:reduced|less)\\s+.*action\\s+speed|temporal\\s+chains"
+    },
+    {
+      "id": "high-crit-monsters",
+      "label": "High Crit Monsters",
+      "severity": "strong",
+      "pattern": "monsters?\\s+(?:have|gain|deal)[^\\n]{0,40}critical"
+    },
+    {
+      "id": "elemental-penetration",
+      "label": "Elemental Penetration",
+      "severity": "strong",
+      "pattern": "monsters?[^\\n]{0,40}penetrat(?:e|es|ion)"
+    },
+    {
+      "id": "fast-monsters",
+      "label": "Fast Monsters",
+      "severity": "strong",
+      "pattern": "monsters?[^\\n]{0,40}(?:attack|cast|movement)[^\\n]{0,15}speed"
+    },
+    {
+      "id": "extra-elemental-damage",
+      "label": "Extra Elemental Damage",
+      "severity": "strong",
+      "pattern": "(?:deals?|gains?)[^\\n]{0,30}?damage\\s+as\\s+extra"
+    },
+    {
+      "id": "lowered-max-resistances",
+      "label": "Lowered Max Resistances",
+      "severity": "strong",
+      "pattern": "maximum\\s+player\\s+resistances"
+    },
+    {
+      "id": "additional-projectiles",
+      "label": "Extra Projectiles",
+      "severity": "moderate",
+      "pattern": "fires?\\s+\\d+\\s+additional\\s+projectiles?"
+    },
+    {
+      "id": "player-curses",
+      "label": "Cursed Players",
+      "severity": "moderate",
+      "pattern": "players?\\s+are\\s+cursed\\s+with"
+    },
+    {
+      "id": "reduced-curse-effect",
+      "label": "Reduced Curse Effect",
+      "severity": "minor",
+      "pattern": "(?:reduced|less)[^\\n]{0,25}curse|curse[^\\n]{0,25}(?:reduced|less)"
+    }
+  ],
+  "positivePatterns": [
+    {
+      "reason": "more rare monsters",
+      "pattern": "(?:increased|additional).*rare\\s+monsters",
+      "bonus": 6
+    },
+    {
+      "reason": "more magic monsters",
+      "pattern": "(?:increased|additional).*magic\\s+monsters",
+      "bonus": 4
+    }
+  ],
+  "mechanicPatterns": {
+    "delirium": "\\bdeliri(?:um|ous)\\b",
+    "expedition": "\\bexpedition\\b",
+    "abyss": "\\babyss(?:al|es)?\\b",
+    "ritual": "\\britual\\b",
+    "breach": "\\bbreach(?:es)?\\b",
+    "irradiated": "\\birradiat(?:ed|ion)\\b",
+    "temple": "\\btemple\\b|vaal beacon"
+  },
+  "extraContentBonus": {
+    "ritual": 10,
+    "breach": 10,
+    "delirium": 8,
+    "expedition": 8
+  },
+  "mechanicValues": {
+    "delirium": 10,
+    "breach": 7,
+    "abyss": 7,
+    "irradiated": 6,
+    "expedition": 5,
+    "ritual": 5,
+    "temple": 5
+  },
+  "mechanics": [
+    {
+      "name": "Delirium",
+      "priorityStat": "packSize",
+      "secondaryStats": [
+        "itemRarity",
+        "quantity"
+      ],
+      "recommendedTablets": [
+        "Delirium Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 40,
+      "detect": "delirium",
+      "confidence": "medium",
+      "source": "community"
+    },
+    {
+      "name": "Expedition",
+      "priorityStat": "quantity",
+      "secondaryStats": [
+        "monsterRarity",
+        "packSize"
+      ],
+      "recommendedTablets": [
+        "Expedition Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 35,
+      "detect": "expedition",
+      "confidence": "medium",
+      "source": "community"
+    },
+    {
+      "name": "Abyss",
+      "priorityStat": "monsterRarity",
+      "secondaryStats": [
+        "itemRarity",
+        "quantity"
+      ],
+      "recommendedTablets": [
+        "Abyss Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 30,
+      "detect": "abyss",
+      "confidence": "high",
+      "source": "community"
+    },
+    {
+      "name": "Ritual",
+      "priorityStat": "monsterRarity",
+      "secondaryStats": [
+        "packSize",
+        "monsterEffectiveness"
+      ],
+      "recommendedTablets": [
+        "Ritual Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 35,
+      "detect": "ritual",
+      "confidence": "medium",
+      "source": "community"
+    },
+    {
+      "name": "Breach",
+      "priorityStat": "monsterEffectiveness",
+      "secondaryStats": [
+        "itemRarity"
+      ],
+      "recommendedTablets": [
+        "Breach Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 35,
+      "detect": "breach",
+      "confidence": "high",
+      "source": "community"
+    },
+    {
+      "name": "General",
+      "priorityStat": "itemRarity",
+      "secondaryStats": [
+        "monsterRarity",
+        "packSize"
+      ],
+      "recommendedTablets": [
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 30,
+      "confidence": "low",
+      "source": "manual"
+    },
+    {
+      "name": "Irradiated",
+      "priorityStat": "itemRarity",
+      "secondaryStats": [
+        "monsterEffectiveness",
+        "quantity"
+      ],
+      "recommendedTablets": [
+        "Irradiated Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 30,
+      "detect": "irradiated",
+      "confidence": "low",
+      "source": "manual"
+    },
+    {
+      "name": "Temple",
+      "priorityStat": "itemRarity",
+      "secondaryStats": [
+        "packSize",
+        "quantity"
+      ],
+      "recommendedTablets": [
+        "Temple Tablet",
+        "Overseer Tablet"
+      ],
+      "skipIfBelow": 30,
+      "detect": "temple",
+      "confidence": "low",
+      "source": "manual"
+    }
+  ],
+  "tablets": [
+    {
+      "name": "Overseer Tablet",
+      "mods": [
+        "12% increased Monster Effectiveness",
+        "17% increased Monster Rarity",
+        "47% increased Rarity of Items dropped by Map Bosses",
+        "24% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "general"
+      ],
+      "confidence": "high",
+      "source": "poe2db"
+    },
+    {
+      "name": "Breach Tablet",
+      "mods": [
+        "17% increased Rarity of Monsters",
+        "10% increased Rarity of Items found",
+        "35% increased chance to drop a Waystone",
+        "10% increased Pack Size"
+      ],
+      "tags": [
+        "breach"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "breach",
+          "value": 7
+        },
+        {
+          "type": "currency",
+          "id": "breach_splinter",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Ritual Tablet",
+      "mods": [
+        "17% increased Monster Rarity",
+        "6% increased Pack Size",
+        "35% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "ritual"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "ritual",
+          "value": 5
+        },
+        {
+          "type": "currency",
+          "id": "tribute",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Delirium Tablet",
+      "mods": [
+        "10% increased Rarity of Items found",
+        "12% increased Monster Effectiveness",
+        "22% increased Pack Size for Delirium Monsters",
+        "35% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "delirium"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "delirium",
+          "value": 10
+        },
+        {
+          "type": "currency",
+          "id": "simulacrum_splinter",
+          "weight": 3
+        }
+      ]
+    },
+    {
+      "name": "Expedition Tablet",
+      "mods": [
+        "12% increased Monster Effectiveness",
+        "6% increased Pack Size",
+        "35% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "expedition"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "expedition",
+          "value": 5
+        },
+        {
+          "type": "currency",
+          "id": "logbook",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Abyss Tablet",
+      "mods": [
+        "17% increased Monster Rarity",
+        "12% increased Monster Effectiveness",
+        "35% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "abyss"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "abyss",
+          "value": 7
+        },
+        {
+          "type": "currency",
+          "id": "abyssal_jewel",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "name": "Irradiated Tablet",
+      "mods": [
+        "10% increased Rarity of Items found",
+        "17% increased Monster Rarity",
+        "35% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "irradiated"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "irradiated",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "Temple Tablet",
+      "mods": [
+        "10% increased Rarity of Items found",
+        "6% increased Pack Size",
+        "35% increased chance to drop a Waystone"
+      ],
+      "tags": [
+        "temple"
+      ],
+      "confidence": "high",
+      "source": "poe2db",
+      "rewards": [
+        {
+          "type": "mechanic",
+          "id": "temple",
+          "value": 5
+        }
+      ]
+    }
+  ]
+}
