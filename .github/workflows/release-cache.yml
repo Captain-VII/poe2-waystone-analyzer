@@ -1,0 +1,33 @@
+# Warms the Rust release-profile cache that release.yml restores. A cache
+# saved from a tag run is scoped to that tag, so no later release could ever
+# reuse it: every release compiled ~500 crates from scratch. Caches saved
+# on the default branch are readable from every tag, so this builds the
+# exact same release binary as tauri-action (`tauri build`, minus bundling)
+# on each push to main and saves it under the shared "release" key.
+name: Release cache
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-cache
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: release
+      - run: npm ci
+      - run: npx tauri build --no-bundle

@@ -162,10 +162,15 @@ Chaque push ou PR :
 
 Si l'une de ces checks échoue, le CI rouge et refuse le merge.
 
+### .github/workflows/release-cache.yml
+
+Chaque push sur `main` : build release (`tauri build --no-bundle`) qui sauvegarde le cache Rust sous la clé partagée `release`. Un cache créé sur un tag n'est lisible que par ce tag, donc c'est `main` qui doit le préparer pour que les releases ne recompilent pas tout. Taguer avant la fin de ce job marche quand même, juste plus lentement.
+
 ### .github/workflows/release.yml
 
 Déclenché quand tu pushes un tag (`git tag v0.4.1 && git push origin v0.4.1`) :
 
+0. Attend que `ci.yml` soit vert sur le commit tagué (échoue sinon)
 1. Build l'executable (Tauri)
 2. Signe l'MSI avec la clé privée (stockée en GitHub secret)
 3. Extrait les bullets du CHANGELOG pour la description
