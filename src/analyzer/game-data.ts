@@ -15,7 +15,7 @@
 
 import builtinJson from "../../data/game-data.json";
 
-export const GAME_DATA_SCHEMA = 1;
+const GAME_DATA_SCHEMA = 1;
 
 export type StatSignal = "itemRarity" | "monsterRarity" | "packSize" | "monsterEffectiveness" | "waystoneDropChance";
 export type StatKey = StatSignal | "quantity";

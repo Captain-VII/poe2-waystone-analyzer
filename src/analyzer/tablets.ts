@@ -163,7 +163,3 @@ export function setActiveTablets(overrides: RawTabletDef[]): void {
 export function getActiveTablets(): TabletDef[] {
   return active.filter((t) => t.enabled);
 }
-
-export function findTablet(name: string): TabletDef | undefined {
-  return active.find((t) => t.name === name);
-}

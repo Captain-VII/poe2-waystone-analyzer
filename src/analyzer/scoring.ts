@@ -72,7 +72,7 @@ export interface Weights {
 // Per-stat ceiling applied before weighting, for the LEGACY display-only
 // breakdown only (see file-level comment) — keeps it stable and normalized
 // even if a garbled outlier value gets parsed. Not used by the actual score.
-export const CAPS: Record<keyof Weights, number> = {
+const CAPS: Record<keyof Weights, number> = {
   itemRarity: 200,
   monsterRarity: 100,
   packSize: 150,

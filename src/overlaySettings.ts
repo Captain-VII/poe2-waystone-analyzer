@@ -14,13 +14,13 @@ const KEYS = {
   pinnedTablets: "overlay.pinnedTablets",
 } as const;
 
-export const OPACITY_MIN = 60;
-export const OPACITY_MAX = 100;
-export const OPACITY_DEFAULT = 96; // matches panel.css's prior hardcoded 0.96
+const OPACITY_MIN = 60;
+const OPACITY_MAX = 100;
+const OPACITY_DEFAULT = 96; // matches panel.css's prior hardcoded 0.96
 
-export const SCALE_MIN = 0.8;
-export const SCALE_MAX = 1.05; // one reachable step above SCALE_DEFAULT, aligned to step=0.05
-export const SCALE_DEFAULT = 1;
+const SCALE_MIN = 0.8;
+const SCALE_MAX = 1.05; // one reachable step above SCALE_DEFAULT, aligned to step=0.05
+const SCALE_DEFAULT = 1;
 
 /** Guards against corrupted/hand-edited localStorage (missing key, empty
  *  string, non-numeric, NaN, or out-of-range) — clamps into range rather

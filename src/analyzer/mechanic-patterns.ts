@@ -23,8 +23,6 @@ import { onGameData } from "./game-data";
 // place so every importer keeps the same object.
 export const MECHANIC_PATTERNS: Record<string, RegExp> = {};
 
-export type MechanicPatternId = string;
-
 /** Display-only "extra content: X" bonus points (scoring.ts's
  *  POSITIVE_MOD_PATTERNS) — exact current membership + weights. Order
  *  matters: it drives bonusDetails/insights display order. */
