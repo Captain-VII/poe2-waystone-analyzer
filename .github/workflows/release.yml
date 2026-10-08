@@ -27,7 +27,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: dtolnay/rust-toolchain@stable
+      # Installs the toolchain pinned in rust-toolchain.toml.
+      - run: rustup toolchain install
       # Restores the release-profile cache release-cache.yml saves from main.
       # Never saves: a tag-scoped cache can't be read by any later tag.
       - uses: Swatinem/rust-cache@v2
