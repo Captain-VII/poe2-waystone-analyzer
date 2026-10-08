@@ -7,6 +7,11 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 0.6.0-beta.3
+
+- **Under-the-hood update:** the app framework and its components were brought up to date, including the auto-updater and clipboard handling.
+- **Fixed a startup error** that could fire as the overlay was first drawn.
+
 ## 0.6.0-beta.2
 
 - **Toggling the Beta channel now checks for an update right away** instead of waiting for a manual "Check for updates" click — switch it on to see the latest beta, switch it off to be offered the latest stable build again (even if that means stepping back down from a beta you're currently running).
