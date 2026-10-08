@@ -97,6 +97,18 @@ itself was verified working (correctly reports "renders fine" against a
 real live dev session) but has not yet caught an actual black-frame
 occurrence, since the bug didn't reproduce during that session.
 
+**Update (2026-10-08): automatic recovery wired in.** The OS-level check
+now reacts: a black verdict is confirmed by a second capture 250ms later,
+then the window gets a hide/show cycle (at most 2 times) and is re-checked.
+It runs ~1.75s after the startup show and ~0.9s after every Ins reveal, and
+never on a hidden window (capturing one reads the game behind it, and
+"recovering" would re-show an overlay the player dismissed). The decision
+loop is `run_render_check` in `lib.rs`, unit-tested with scripted verdicts.
+Log lines to look for in Export Logs: `RECOVERED from black frame` (it
+worked) or `still BLANK/BLACK after recovery attempts` (it didn't).
+Bisectable via `OVERLAY_RENDER_RECOVERY=0`. Still open until real-world
+logs show a recovery succeeding.
+
 ## 2. Tablet pool is mostly not verified against real PoE2 tablet items — and the real system doesn't match this app's model
 
 **As of the 2026-07-04 update below, `src/analyzer/tablets.ts` ships
