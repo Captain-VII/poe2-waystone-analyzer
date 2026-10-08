@@ -1248,11 +1248,8 @@ mod tests {
 
     fn solid_bgra(width: usize, height: usize, b: u8, g: u8, r: u8) -> Vec<u8> {
         let mut buf = vec![0u8; width * height * 4];
-        for px in buf.chunks_exact_mut(4) {
-            px[0] = b;
-            px[1] = g;
-            px[2] = r;
-            px[3] = 255;
+        for px in buf.as_chunks_mut::<4>().0 {
+            *px = [b, g, r, 255];
         }
         buf
     }
