@@ -6,6 +6,7 @@
 
 import type { ModStats } from "./mod-parser";
 import { MECHANIC_PATTERNS } from "./mechanic-patterns";
+import { onGameData } from "./game-data";
 
 export type StatKey = keyof ModStats;
 
@@ -122,128 +123,22 @@ export function scoreMechanicFit(profile: Partial<Record<StatKey, number>>, mech
 // mechanic-patterns.ts in the same pass, alongside the other six
 // (Heist/Sanctum/Harvest/Metamorph/Incursion/Bestiary), which had no other
 // consumer to begin with.
-export const MECHANICS: MechanicDef[] = [
-  // Community consensus 0.5 (switchbladegaming/timesaver/u4gm, 2026-07-06):
-  // pack size drives splinter throughput in the fog; rarity (140%+ target)
-  // and quantity (20-25%) scale what each fog kill is worth.
-  {
-    name: "Delirium",
-    priorityStat: "packSize",
-    secondaryStats: ["itemRarity", "quantity"],
-    recommendedTablets: ["Delirium Tablet", "Overseer Tablet"],
-    skipIfBelow: 40,
-    detect: MECHANIC_PATTERNS.delirium,
-    confidence: "medium",
-    source: "community",
-  },
-  // Community consensus 0.5 (maxroll/aoeah/timesaver, 2026-07-06): logbook/
-  // artifact quantity is the money stat, then runic/rare monster spawns;
-  // pack size only helps chain detonations.
-  {
-    name: "Expedition",
-    priorityStat: "quantity",
-    secondaryStats: ["monsterRarity", "packSize"],
-    recommendedTablets: ["Expedition Tablet", "Overseer Tablet"],
-    skipIfBelow: 35,
-    detect: MECHANIC_PATTERNS.expedition,
-    confidence: "medium",
-    source: "community",
-  },
-  // Reverted 2026-07-10 (same day, later): the 2026-07-10 packSize-priority
-  // change above (Fubgun's Jado/Hilda strats) was contradicted by two
-  // independent sources found on a real waystone bug report (Abyss Tablet
-  // scoring 35/100 despite +62% Monster Rarity): Mobalytics "Abyss Juicing
-  // Tablet Tier List" (Perra) — "Pack Size is considered bait... Rare
-  // Monster Modifier along with the Rarity of Items modifiers are most
-  // important" — and Switchblade Gaming's waystone-rolling priority for
-  // Abyss, "rare monster count → item quantity → monster effectiveness"
-  // (pack size/monster rarity explicitly assigned to other mechanics
-  // there). 2 sources against Fubgun's 1, and both converge with the
-  // Abyss Tablet's own real roll (tablets.ts: "15% increased Rarity of
-  // Monsters", written for the monsterRarity-priority model). "Rare
-  // monster count" isn't a tracked StatKey (KNOWN_ISSUES #2) — monsterRarity
-  // is the nearest tracked proxy, same convention used elsewhere.
-  {
-    name: "Abyss",
-    priorityStat: "monsterRarity",
-    secondaryStats: ["itemRarity", "quantity"],
-    recommendedTablets: ["Abyss Tablet", "Overseer Tablet"],
-    skipIfBelow: 30,
-    detect: MECHANIC_PATTERNS.abyss,
-    // Two independent community sources converging, cross-checked against
-    // the Abyss Tablet's own real roll (tablets.ts) — a notch above the
-    // plain single-guide "community" entries below.
-    confidence: "high",
-    source: "community",
-  },
-  // Community consensus 0.5 (mobalytics/exile.codex/aoeah, 2026-07-06):
-  // tribute scales with magic/rare monster count and pack density — item
-  // rarity does NOT affect ritual rewards, so it's dropped here.
-  {
-    name: "Ritual",
-    priorityStat: "monsterRarity",
-    secondaryStats: ["packSize", "monsterEffectiveness"],
-    recommendedTablets: ["Ritual Tablet", "Overseer Tablet"],
-    skipIfBelow: 35,
-    detect: MECHANIC_PATTERNS.ritual,
-    confidence: "medium",
-    source: "community",
-  },
-  // Fubgun 0.5 atlas strats (mobalytics, user-pasted tab text, 2026-07-10):
-  // waystone line reads "you're looking for high item rarity and high
-  // monster effectiveness", and among tablet mods "if you can only get one,
-  // choose monster effectiveness". Neither Monster Rarity nor Pack Size is
-  // mentioned — converges with the independent aoeah mirror ("pack size is
-  // irrelevant / monster rarity mostly wasted — rare monster count in a
-  // Breach is static", set by tablets, not map stats). Replaces the older
-  // switchbladegaming/aoeah/boostmatch consensus (monsterRarity priority).
-  // Single secondary on purpose — no padding with an explicitly-wasted stat.
-  {
-    name: "Breach",
-    priorityStat: "monsterEffectiveness",
-    secondaryStats: ["itemRarity"],
-    recommendedTablets: ["Breach Tablet", "Overseer Tablet"],
-    skipIfBelow: 35,
-    detect: MECHANIC_PATTERNS.breach,
-    // Two independent community sources converge (Fubgun's own tab text +
-    // an independent aoeah mirror) — same bar as Abyss above.
-    confidence: "high",
-    source: "community",
-  },
-  {
-    name: "General",
-    priorityStat: "itemRarity",
-    secondaryStats: ["monsterRarity", "packSize"],
-    recommendedTablets: ["Overseer Tablet"],
-    skipIfBelow: 30,
-    // Generic catch-all, not tied to any one strat guide's mechanic-
-    // specific numbers — hand-picked to be broadly reasonable.
-    confidence: "low",
-    source: "manual",
-  },
-  {
-    name: "Irradiated",
-    priorityStat: "itemRarity",
-    secondaryStats: ["monsterEffectiveness", "quantity"],
-    recommendedTablets: ["Irradiated Tablet", "Overseer Tablet"],
-    skipIfBelow: 30,
-    detect: MECHANIC_PATTERNS.irradiated,
-    confidence: "low",
-    source: "manual",
-  },
-  {
-    name: "Temple",
-    priorityStat: "itemRarity",
-    secondaryStats: ["packSize", "quantity"],
-    recommendedTablets: ["Temple Tablet", "Overseer Tablet"],
-    skipIfBelow: 30,
-    detect: MECHANIC_PATTERNS.temple,
-    confidence: "low",
-    source: "manual",
-  },
-];
+// Filled from game data (data/game-data.json, mechanics); provenance notes
+// per mechanic are in data/SOURCES.md.
+export const MECHANICS: MechanicDef[] = [];
 
 let active: MechanicDef[] = MECHANICS;
+
+// Registered after `active` exists: the hook runs immediately with the
+// built-in data. Resets any meta.json overlay, which meta-config.ts re-applies.
+onGameData((d) => {
+  MECHANICS.splice(
+    0,
+    MECHANICS.length,
+    ...d.mechanics.map((m) => ({ ...m, detect: m.detect ? MECHANIC_PATTERNS[m.detect] : undefined })),
+  );
+  active = MECHANICS;
+});
 
 /** Overlays meta-config.ts's parsed meta.json onto the bundled defaults —
  *  read by adapter.ts's computeMechanicScores instead of MECHANICS

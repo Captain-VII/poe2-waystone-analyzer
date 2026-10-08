@@ -58,6 +58,7 @@
 
 import { PATTERNS as NUMERIC_PATTERNS, type ModStats } from "./mod-parser";
 import { MECHANIC_PATTERNS, EXTRA_CONTENT_BONUS } from "./mechanic-patterns";
+import { getGameData, onGameData, type GameData } from "./game-data";
 import { TIER_SCORE, tierForPercent, type StatTier } from "./mechanics";
 
 export interface Weights {
@@ -83,10 +84,9 @@ export const CAPS: Record<keyof Weights, number> = {
 // legacy display breakdown (`EvaluationResult.breakdown`, UI-only — see
 // file-level comment). NOT used by `rewardScore`/`effectiveScore`/`score`.
 //
-// NOT meta.json-driven: unlike mechanics.ts/tablets.ts, these weights (and
-// CAPS/DEFAULT_THRESHOLD/the pattern tables below) are hardcoded here and
-// read by nothing in meta-config.ts. Tuning them requires editing this file
-// and rebuilding — see README's "Tuning via meta.json" section.
+// Display-only, so these weights and CAPS stay in code. Everything that
+// tracks the game (stat ceilings, SKIP threshold, danger/positive patterns)
+// lives in data/game-data.json and can change without a rebuild.
 // Key order here drives the Heat Breakdown UI's row order (breakdownFields
 // iterates Object.keys(weights)) — matches the real in-game stat order
 // (2026-07-12, user report), not the Weights/ModStats type declaration
@@ -99,7 +99,10 @@ export const DEFAULT_WEIGHTS: Weights = {
   waystoneDropChance: 10 / CAPS.waystoneDropChance,
 };
 
-export const DEFAULT_THRESHOLD = 20; // below this: SKIP (§9)
+/** Below this score: SKIP (§9). Read at call time, it follows game data. */
+export function skipThreshold(): number {
+  return getGameData().scoring.skipThreshold;
+}
 
 // Danger/annoyance mods — detected for display only (`warning`/`warnings`/
 // `dangerLevel`); they never affect the score.
@@ -114,121 +117,12 @@ export const DEFAULT_THRESHOLD = 20; // below this: SKIP (§9)
 // (heavily weighted, see computeDangerLevel); "strong" mods actively hurt
 // survivability/leech (crit/penetration/speed/no-leech/no-regen); "moderate"
 // slow the loop without threatening it; "minor" is cosmetic annoyance.
-export type DangerSeverity = "reflect" | "strong" | "moderate" | "minor";
-const DANGER_PATTERNS: { id: string; label: string; severity: DangerSeverity; pattern: RegExp }[] = [
-  // Real PoE2 wording is "Monsters reflect 18% of Elemental Damage" — allow
-  // any short run of characters (the "18% of Elemental" part) between the
-  // verb and "damage", not just a single bare word.
-  {
-    id: "reflect-damage",
-    label: "Reflect Damage",
-    severity: "reflect",
-    pattern: /reflect(?:s|ed)?\b[^\n]{0,30}?damage/i,
-  },
-  { id: "cannot-leech", label: "Cannot Leech", severity: "strong", pattern: /cannot\s+leech/i },
-  // Real PoE2 wording is "Players cannot Regenerate Life, Mana or Energy
-  // Shield" — "no ... regenerat" alone never matched it.
-  {
-    id: "no-regeneration",
-    label: "No Regeneration",
-    severity: "strong",
-    pattern: /(?:no|cannot)\s+[^\n]{0,30}?regenerat/i,
-  },
-  // Real PoE2 wording is "Players have X% less Recovery Rate of Life and
-  // Energy Shield" — "reduced ... recovery" alone never matched it.
-  {
-    id: "reduced-recovery",
-    label: "Reduced Recovery",
-    severity: "moderate",
-    pattern: /(?:reduced|less)\s+[^\n]{0,30}?recovery/i,
-  },
-  {
-    id: "reduced-regeneration",
-    label: "Reduced Regeneration",
-    severity: "moderate",
-    pattern: /less\s+.*regenerat/i,
-  },
-  { id: "avoid-ailments", label: "Avoid Ailments", severity: "moderate", pattern: /avoid(?:s|ed)?\s+.*ailments?/i },
-  {
-    id: "reduced-action-speed",
-    label: "Reduced Action Speed",
-    severity: "moderate",
-    pattern: /(?:reduced|less)\s+.*action\s+speed|temporal\s+chains/i,
-  },
-  {
-    id: "high-crit-monsters",
-    label: "High Crit Monsters",
-    severity: "strong",
-    // Verb-scoped (have/gain/deal): the map suffix "Monsters take X%
-    // reduced Extra Damage from Critical Hits" is a *defensive* monster mod
-    // (annoying, not dangerous) and must not read as monsters critting you.
-    pattern: /monsters?\s+(?:have|gain|deal)[^\n]{0,40}critical/i,
-  },
-  {
-    id: "elemental-penetration",
-    label: "Elemental Penetration",
-    severity: "strong",
-    // Scoped to monster wording like its siblings: a bare /penetrat/ also
-    // matches player-side gear/passive lines ("Damage Penetrates ...") and
-    // resistance text, which are not map dangers.
-    pattern: /monsters?[^\n]{0,40}penetrat(?:e|es|ion)/i,
-  },
-  {
-    id: "fast-monsters",
-    label: "Fast Monsters",
-    severity: "strong",
-    pattern: /monsters?[^\n]{0,40}(?:attack|cast|movement)[^\n]{0,15}speed/i,
-  },
-  {
-    id: "extra-elemental-damage",
-    label: "Extra Elemental Damage",
-    severity: "strong",
-    // "Monsters deal 30% of Damage as Extra Fire" / "Monsters gain 20% of
-    // their Physical Damage as extra Chaos Damage".
-    pattern: /(?:deals?|gains?)[^\n]{0,30}?damage\s+as\s+extra/i,
-  },
-  {
-    id: "lowered-max-resistances",
-    label: "Lowered Max Resistances",
-    severity: "strong",
-    // "-12% maximum Player Resistances" — the stat only ever appears on a
-    // waystone as this malus, so matching the stat name alone is safe.
-    pattern: /maximum\s+player\s+resistances/i,
-  },
-  {
-    id: "additional-projectiles",
-    label: "Extra Projectiles",
-    severity: "moderate",
-    // "Monsters fire 2 additional Projectiles"
-    pattern: /fires?\s+\d+\s+additional\s+projectiles?/i,
-  },
-  {
-    id: "player-curses",
-    label: "Cursed Players",
-    severity: "moderate",
-    // "Players are Cursed with Elemental Weakness/Enfeeble/Temporal Chains"
-    pattern: /players?\s+are\s+cursed\s+with/i,
-  },
-  {
-    id: "reduced-curse-effect",
-    label: "Reduced Curse Effect",
-    severity: "minor",
-    pattern: /(?:reduced|less)[^\n]{0,25}curse|curse[^\n]{0,25}(?:reduced|less)/i,
-  },
-];
+export type { DangerSeverity } from "./game-data";
+import type { DangerSeverity } from "./game-data";
+let DANGER_PATTERNS: GameData["dangerPatterns"] = [];
 
-// A duplicate id would silently last-write-wins overwrite an entry in
-// DANGER_LABEL_BY_ID below — no compiler error, wrong label in the UI. The
-// table is static developer-authored data, so a duplicate is always a
-// copy-paste bug: fail hard at module load (dev, tests, and app alike)
-// instead of shipping the corruption.
-const dangerIds = DANGER_PATTERNS.map((d) => d.id);
-const duplicateDangerIds = [...new Set(dangerIds.filter((id, i) => dangerIds.indexOf(id) !== i))];
-if (duplicateDangerIds.length > 0) {
-  throw new Error(`Duplicate DANGER_PATTERNS ids: ${duplicateDangerIds.join(", ")}`);
-}
-
-const DANGER_LABEL_BY_ID: Record<string, string> = Object.fromEntries(DANGER_PATTERNS.map((d) => [d.id, d.label]));
+// Duplicate ids are rejected by parseGameData (game-data.ts).
+let DANGER_LABEL_BY_ID: Record<string, string> = {};
 
 // Exported so adapter.ts can sort DangerHit[] by the same domain order when
 // building its UI-facing view (DangerHitView), without either duplicating
@@ -242,16 +136,7 @@ export const DANGER_SEVERITY_ORDER: Record<DangerSeverity, number> = { reflect: 
 // derived from the shared EXTRA_CONTENT_BONUS/MECHANIC_PATTERNS
 // (mechanic-patterns.ts) — order preserved (ritual, breach, delirium,
 // expedition after the 2 monster entries) since it drives display order.
-const POSITIVE_MOD_PATTERNS: Record<string, [RegExp, number]> = {
-  "more rare monsters": [/(?:increased|additional).*rare\s+monsters/i, 6.0],
-  "more magic monsters": [/(?:increased|additional).*magic\s+monsters/i, 4.0],
-  ...Object.fromEntries(
-    Object.entries(EXTRA_CONTENT_BONUS).map(([id, bonus]) => [
-      `extra content: ${id}`,
-      [MECHANIC_PATTERNS[id as keyof typeof MECHANIC_PATTERNS], bonus] as [RegExp, number],
-    ]),
-  ),
-};
+let POSITIVE_MOD_PATTERNS: Record<string, [RegExp, number]> = {};
 
 function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x));
@@ -267,49 +152,16 @@ const STAT_SIGNALS: StatSignal[] = [
   "waystoneDropChance",
 ];
 
-// Each stat's realistic ceiling — used ONLY to compare stats of very
-// different natural ranges on a level footing before picking "the biggest
-// one". Sourced 2026-07-11 from the user's own observation of the item
-// market's min/max roll range per stat (not a web guide — explicitly "pas
-// une vérité absolue" per the user, but the closest thing to real
-// population data this project has had): Item Rarity 10-100%, Pack Size
-// 6-63%, Monster Rarity 18-103%, Monster Effectiveness 13-70%, Waystone
-// Drop Chance 10-155%. Ceilings below are those observed maxima, rounded
-// up slightly for headroom (same "generous ceiling over a tight fit"
-// policy used everywhere else in this file) — replaces the flat-100-for-
-// everything guess from the 2026-07-11 Pack Size fix above, which was
-// itself already known to be provisional. A stat below the market's own
-// observed minimum doesn't need special-casing here: it simply doesn't
-// appear as a mod line, so parseMods already reads it as 0.
-export const STAT_REFERENCES: Record<StatSignal, number> = {
-  itemRarity: 100,
-  monsterRarity: 105,
-  packSize: 65,
-  monsterEffectiveness: 70,
-  waystoneDropChance: 155,
-};
+// Each stat's realistic ceiling, used only to compare stats of different
+// natural ranges before picking the biggest one (data/SOURCES.md).
+export const STAT_REFERENCES = {} as Record<StatSignal, number>;
 
 // Max bonus a single non-dominant stat can add, scaled by how close it is to
-// its own ceiling (100% of ceiling = full +5). With at most 4 other stats,
-// the composite score can't exceed legendary's 80 + 4*5 = 100 — no overflow
-// cap needed, unlike the old multiplicative-synergy model.
-const SECONDARY_BONUS_CAP = 5;
+// its own ceiling (data/SOURCES.md).
+let SECONDARY_BONUS_CAP = 0;
 
-// Sourced 2026-07-11 from 6 real T15 waystones the user pasted: Waystone
-// Drop Chance was the dominant stat in all 6, and cleared the shared 50%
-// legendary boundary (~77.5% raw, out of its 155 ceiling) in 3 of them — a
-// materially higher hit rate than any other stat individually reaching
-// legendary in the same sample. Its real range (10-155%) is wider and
-// skews toward high common rolls more than the other four. Its legendary
-// bar alone is raised to 70% of ceiling (~108.5% raw); weak/ok/top stay on
-// the shared 15/25/50 boundaries (tierForPercent), and the other four
-// stats are untouched. Only the DOMINANT stat's tier is affected — a
-// secondary stat's bonus eligibility (below) always uses the shared
-// boundaries, since that's a different question ("is this stat at least
-// decent") from "does the dominant stat deserve the top label".
-const DOMINANT_LEGENDARY_OVERRIDE: Partial<Record<StatSignal, number>> = {
-  waystoneDropChance: 70,
-};
+// Per-stat legendary bar for the DOMINANT stat only (data/SOURCES.md).
+let DOMINANT_LEGENDARY_OVERRIDE: Partial<Record<StatSignal, number>> = {};
 
 function dominantTierFor(key: StatSignal, normalizedPercent: number): StatTier {
   const legendaryAt = DOMINANT_LEGENDARY_OVERRIDE[key] ?? 50;
@@ -318,6 +170,26 @@ function dominantTierFor(key: StatSignal, normalizedPercent: number): StatTier {
   if (normalizedPercent < legendaryAt) return "top";
   return "legendary";
 }
+
+// Rebuilds every table above from the current game data (built-in, then any
+// newer remote copy). MECHANIC_PATTERNS/EXTRA_CONTENT_BONUS are refreshed
+// first since mechanic-patterns.ts registered its hook before this module.
+onGameData((d) => {
+  DANGER_PATTERNS = d.dangerPatterns;
+  DANGER_LABEL_BY_ID = Object.fromEntries(d.dangerPatterns.map((x) => [x.id, x.label]));
+  POSITIVE_MOD_PATTERNS = {
+    ...Object.fromEntries(d.positivePatterns.map((p) => [p.reason, [p.pattern, p.bonus] as [RegExp, number]])),
+    ...Object.fromEntries(
+      Object.entries(EXTRA_CONTENT_BONUS).map(([id, bonus]) => [
+        `extra content: ${id}`,
+        [MECHANIC_PATTERNS[id], bonus] as [RegExp, number],
+      ]),
+    ),
+  };
+  Object.assign(STAT_REFERENCES, d.scoring.statReferences);
+  SECONDARY_BONUS_CAP = d.scoring.secondaryBonusCap;
+  DOMINANT_LEGENDARY_OVERRIDE = d.scoring.dominantLegendaryOverride;
+});
 
 interface DominantStat {
   key: StatSignal;
@@ -522,7 +394,7 @@ export function evaluateMap(
   stats: ModStats,
   contentText = "",
   weights: Weights = DEFAULT_WEIGHTS,
-  threshold: number = DEFAULT_THRESHOLD,
+  threshold: number = skipThreshold(),
 ): EvaluationResult {
   const breakdown = breakdownFields(stats, weights, CAPS);
   const bonusDetails = detectPositiveMods(contentText);

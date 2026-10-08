@@ -17,28 +17,25 @@
  *  score rework (dominant-stat-plus-bonus model, scoring.ts) — with no
  *  tablet and no other consumer left, they're pure dead weight now too. */
 
-export const MECHANIC_PATTERNS = {
-  // Instilled waystones read "Players in Area are X% Delirious" — the word
-  // "Delirium" never appears on the item, so match both forms.
-  delirium: /\bdeliri(?:um|ous)\b/i,
-  expedition: /\bexpedition\b/i,
-  // "Abysses" is the real plural on tablet/waystone mods ("Adds Abysses to
-  // a Map") — \babyss\b alone misses it.
-  abyss: /\babyss(?:al|es)?\b/i,
-  ritual: /\britual\b/i,
-  breach: /\bbreach(?:es)?\b/i,
-  irradiated: /\birradiat(?:ed|ion)\b/i,
-  temple: /\btemple\b|vaal beacon/i,
-} as const satisfies Record<string, RegExp>;
+import { onGameData } from "./game-data";
 
-export type MechanicPatternId = keyof typeof MECHANIC_PATTERNS;
+// Filled from game data (data/game-data.json, mechanicPatterns): mutated in
+// place so every importer keeps the same object.
+export const MECHANIC_PATTERNS: Record<string, RegExp> = {};
+
+export type MechanicPatternId = string;
 
 /** Display-only "extra content: X" bonus points (scoring.ts's
  *  POSITIVE_MOD_PATTERNS) — exact current membership + weights. Order
  *  matters: it drives bonusDetails/insights display order. */
-export const EXTRA_CONTENT_BONUS: Readonly<Record<string, number>> = {
-  ritual: 10,
-  breach: 10,
-  delirium: 8,
-  expedition: 8,
-};
+export const EXTRA_CONTENT_BONUS: Record<string, number> = {};
+
+function replaceRecord<T>(target: Record<string, T>, source: Record<string, T>): void {
+  for (const k of Object.keys(target)) delete target[k];
+  Object.assign(target, source);
+}
+
+onGameData((d) => {
+  replaceRecord(MECHANIC_PATTERNS, d.mechanicPatterns);
+  replaceRecord(EXTRA_CONTENT_BONUS, d.extraContentBonus);
+});

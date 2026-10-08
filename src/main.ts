@@ -33,7 +33,15 @@ import {
 import { registerHotkeys, getHotkeyBase, setHotkeyBase } from "./hotkeys";
 import { getAutostartEnabled, setAutostartEnabled } from "./autostart";
 import { reportInteractiveRegions } from "./interactive-rect";
-import { runDiagnostics, applyDebugOpaqueOverride, sendReport, showWhenPainted, logAnalyzeAttempt } from "./diagnostics";
+import {
+  runDiagnostics,
+  applyDebugOpaqueOverride,
+  sendReport,
+  showWhenPainted,
+  logAnalyzeAttempt,
+  logGameData,
+} from "./diagnostics";
+import { applyCachedGameData, refreshGameData } from "./analyzer/remote-game-data";
 import { readClipboardText } from "./clipboard";
 import { analyzeWaystoneText } from "./analyzer/adapter";
 import {
@@ -437,7 +445,22 @@ async function handleDisplayChange(): Promise<void> {
 }
 
 async function init(): Promise<void> {
+  // Game data layers (game-data.ts): a newer copy cached from a previous
+  // session first, then meta.json on top, both before any analysis.
+  void logGameData("cache", applyCachedGameData());
   await loadMetaConfig(); // §3: meta.json weights/tablets/thresholds before any analysis
+  // The published copy is fetched in the background; adopting one resets the
+  // tables, so meta.json is re-applied. The shown result isn't re-scored, the
+  // next analysis uses the new data. Tauri only: the browser preview and the
+  // visual tests must keep scoring with the bundled data.
+  if ("__TAURI_INTERNALS__" in window) {
+    void refreshGameData().then(async (outcome) => {
+      void logGameData("remote", outcome);
+      if (outcome.status !== "applied") return;
+      await loadMetaConfig();
+      overlay.refreshMetaEditor();
+    });
+  }
   // Hand-edits to meta.json outside the app used to need a restart; now the
   // merged tables reload in place. The displayed result deliberately isn't
   // re-scored — the next analysis picks the change up, exactly as it does
