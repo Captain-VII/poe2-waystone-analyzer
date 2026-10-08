@@ -86,15 +86,17 @@ CI va de toute façon refuser les commits qui échouent, mais c'est plus rapide 
 
 ## Versioning & Release
 
-### Les 3 fichiers magiques (doivent toujours être en sync)
+### Version : `npm run bump`
 
-Quand tu bumpes la version, ces trois fichiers doivent avoir **exactement** le même numéro :
+La version vit dans 5 fichiers (package.json, package-lock.json,
+tauri.conf.json, Cargo.toml, Cargo.lock). Ne jamais les éditer à la main :
 
-1. **`package.json`** → `"version": "0.4.0"`
-2. **`src-tauri/Cargo.toml`** → `version = "0.4.0"` (ligne ~20)
-3. **`src-tauri/tauri.conf.json`** → `"version": "0.4.0"` (ligne ~3)
+```bash
+npm run bump -- 1.0.1        # ou 1.0.1-beta.1
+```
 
-Si un seul ne match pas, le CI refusera la release.
+Le script les met tous à jour et ouvre la section `## 1.0.1` du CHANGELOG.
+La release refuse un tag qui ne correspond pas à package.json/tauri.conf.json.
 
 ### Versioning scheme
 
@@ -111,36 +113,9 @@ On suit [Semantic Versioning](https://semver.org/) :
 
 ### Checklist avant release
 
-1. **Remplir CHANGELOG.md** (section "Unreleased")
-   - Titres courts, orienté joueur (pas de détails internes)
-   - Format : `- **Feature/Fix**: court résumé` (voir exemples dans CHANGELOG.md)
-   - Relire pour typos et clarté
-
-2. **Bump la version** dans les 3 fichiers (package.json, Cargo.toml, tauri.conf.json)
-   - Tous la même numéro exactement
-
-3. **Committer les changements**
-   ```bash
-   git add CHANGELOG.md package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
-   git commit -m "Bump version to 0.4.1"
-   git push origin main
-   ```
-
-4. **Tagger et pousser** (déclenche la release automatique)
-   ```bash
-   git tag v0.4.1              # stable (ex: v1.2.3)
-   # OU
-   git tag v0.4.1-beta.1       # beta (ex: v1.2.3-beta.1)
-   git push origin v0.4.1      # ou v0.4.1-beta.1
-   ```
-
-5. **CI va** :
-   - Checker que le tag match le CHANGELOG/package.json
-   - Builder et signer l'executable (Tauri auto)
-   - Publier sur la release GitHub
-   - Upload `latest.json` sur le feed adéquat (`updater` pour stable, `updater-beta` pour beta)
-
-6. **L'app se met à jour** (joueurs avec beta channel verront beta, autres verront stable)
+Tout est dans [RELEASE.md](RELEASE.md) : `npm run bump`, notes CHANGELOG
+(anglais, pour les joueurs), push sur `main`, CI verte, tag. Le workflow
+Release attend lui-même que la CI du commit tagué soit verte.
 
 ### Beta vs. Stable
 
@@ -155,34 +130,29 @@ On suit [Semantic Versioning](https://semver.org/) :
 
 ### .github/workflows/ci.yml
 
-Chaque push ou PR :
-- `checks` (ubuntu-latest) : lint, tests frontend (`npm run test`), build, adapter verification (`npm run verify-adapter`)
+Chaque PR, push sur `main`, et chaque lundi (run planifié, échec = mail) :
+- `checks` (ubuntu-latest) : lint, tests (`npm run test`), build, `npm run verify-adapter`
 - `rust-checks` (windows-latest) : `cargo check`/`test`/`fmt --check`/`clippy -D warnings`
-- `visual-checks` (windows-latest) : captures Playwright vs référence (`npm run test:visual`) — job séparé, tourne sur Windows (pas Linux) à cause des polices système du projet (Segoe UI, Palatino Linotype, Cascadia Mono)
+- `visual-checks` (windows-latest) : captures Playwright (`npm run test:visual`), sur Windows pour les polices du projet (Segoe UI, Palatino Linotype, Cascadia Mono)
 
-Si l'une de ces checks échoue, le CI rouge et refuse le merge.
+Rust est figé par `rust-toolchain.toml` (installé explicitement par chaque workflow) : une nouvelle version de Rust ne casse plus une release. Pour monter de version : changer le fichier, `cargo clippy`, corriger.
 
 ### .github/workflows/release-cache.yml
 
-Chaque push sur `main` : build release (`tauri build --no-bundle`) qui sauvegarde le cache Rust sous la clé partagée `release`. Un cache créé sur un tag n'est lisible que par ce tag, donc c'est `main` qui doit le préparer pour que les releases ne recompilent pas tout. Taguer avant la fin de ce job marche quand même, juste plus lentement.
+Chaque push sur `main` : `tauri build --no-bundle` pour sauvegarder le cache Rust release sous la clé partagée `release`. Un cache créé sur un tag n'est lisible que par ce tag, donc c'est `main` qui le prépare.
 
 ### .github/workflows/release.yml
 
-Déclenché quand tu pushes un tag (`git tag v0.4.1 && git push origin v0.4.1`) :
+Déclenché par un tag `v*` :
+1. Vérifie tag = package.json = tauri.conf.json, et la section CHANGELOG
+2. Attend que `ci.yml` soit vert sur le commit tagué (échoue sinon)
+3. Build et signe l'installeur **NSIS** (signature updater minisign, pas d'Authenticode : SmartScreen prévient à l'installation)
+4. Publie la release GitHub (pre-release si le tag contient `-`)
+5. Met à jour `latest.json` : `updater-beta` à chaque tag, `updater` (stable) seulement sans suffixe
 
-0. Attend que `ci.yml` soit vert sur le commit tagué (échoue sinon)
-1. Build l'executable (Tauri)
-2. Signe l'MSI avec la clé privée (stockée en GitHub secret)
-3. Extrait les bullets du CHANGELOG pour la description
-4. Publie la release GitHub avec l'executable
-5. Upload `latest.json` sur le feed :
-   - **`updater`** (stable) si le tag est plain (`v0.4.1`)
-   - **`updater-beta`** (beta) si le tag contient `-` (`v0.4.1-beta.1`)
+### Dependabot
 
-L'**updater channels** : deux feeds indépendants (GitHub Releases).
-- Au démarrage, l'app demande au feed adéquat si une update existe
-- Stable ask `updater`, beta ask `updater-beta`
-- Les deux peuvent avoir différentes versions sans risque de cross-contamination
+Sécurité uniquement pour npm et cargo (PR groupées), GitHub Actions une PR groupée par mois. Pas de flot de PR de versions.
 
 ---
 
@@ -191,37 +161,40 @@ L'**updater channels** : deux feeds indépendants (GitHub Releases).
 ### Répertoires clés
 
 ```
-poe2-waystone-analyzer-v3/
+poe2-waystone-analyzer/
 ├── src/                          # TypeScript (Vite/frontend)
-│   ├── main.ts                   # Entrée, watchMetaFile, onCheckUpdate
+│   ├── main.ts                   # Entrée, chargement game-data + meta.json, hotkeys
 │   ├── analyzer/
-│   │   ├── scoring.ts            # Juice Score, Mechanic Match Score
-│   │   ├── meta-config.ts        # loadMetaConfig, watchMetaFile
-│   │   └── tablets.ts            # Tablet data + fit scoring
+│   │   ├── game-data.ts          # Validation + diffusion des données de jeu
+│   │   ├── remote-game-data.ts   # Récupération du JSON sur main, cache
+│   │   ├── scoring.ts            # Juice Score (dominant stat), dangers
+│   │   ├── adapter.ts            # Score affiché = meilleur fit de tablette
+│   │   ├── meta-config.ts        # meta.json : load, watch, save
+│   │   └── tablets.ts            # Tablettes vérifiées + migration de noms
 │   ├── components/
-│   │   └── RelicPanel.ts         # UI principale (4 tabs, pinning, etc.)
-│   ├── styles/                   # CSS global + component styles
-│   └── overlaySettings.ts        # localStorage keys + helpers
-│
-├── src-tauri/                    # Rust (Tauri backend)
-│   ├── src/lib.rs               # check_update_channel, log_frontend_report
-│   ├── Cargo.toml               # Dependencies, version sync
-│   └── tauri.conf.json          # Tauri config, version sync
-│
+│   │   └── RelicPanel.ts         # UI principale
+│   └── styles/
+├── data/
+│   ├── game-data.json            # Données de jeu, mises à jour sans release
+│   └── SOURCES.md                # Procédure + provenance de chaque valeur
+├── src-tauri/
+│   ├── src/lib.rs                # run(), état partagé, petites commandes
+│   ├── src/render.rs             # show/hide, détection + récupération écran noir
+│   ├── src/hotkeys.rs            # raccourcis globaux
+│   ├── src/input.rs              # Ctrl+C simulé, détection clic hors overlay
+│   ├── src/updater.rs            # canaux stable/beta
+│   ├── src/logging.rs            # logs fichier, panic hook
+│   └── tauri.conf.json           # config Tauri, CSP
 ├── docs/
-│   ├── overlay-ui-spec.md        # Spec du layout (Full/Compact)
-│   └── release-checklist.md      # Pre-release verification (legacy)
-│
-├── .github/workflows/
-│   ├── ci.yml                    # Tests + linting
-│   └── release.yml               # Build + sign + publish
-│
-├── CLAUDE.md                     # Ce fichier (TOI ES ICI)
-├── README.md                     # Mode d'emploi utilisateur + algo Juice Score
-├── CHANGELOG.md                  # Historique des releases
-├── ROADMAP.md                    # Features futures (français)
-├── KNOWN_ISSUES.md              # Recherche technique + historique bugs
-└── BETA_NOTES.md                 # Guide programme beta (legacy)
+│   ├── overlay-ui-spec.md        # Spec UI
+│   └── history/                  # Journal de dev + problèmes résolus (archives)
+├── scripts/                      # verify-adapter, bump-version
+├── README.md                     # Joueurs
+├── CONTRIBUTING.md               # Devs : setup, checks, structure
+├── RELEASE.md                    # Procédure de release
+├── CHANGELOG.md                  # Notes de version (embarqué dans l'app)
+├── ROADMAP.md                    # Statut 1.0 + idées
+└── KNOWN_ISSUES.md               # Problèmes ouverts
 ```
 
 ### Fichiers clés pour comprendre le scoring
@@ -298,7 +271,9 @@ Chaque doc a un rôle spécifique. Ne pas en dupliquer le contenu.
 | **CHANGELOG.md** | Joueurs | Historique des releases (embarqué dans l'app) |
 | **ROADMAP.md** | Devs | Features futures, priorités, notes d'implémentation (français) |
 | **KNOWN_ISSUES.md** | Devs/chercheurs | Bugs ouverts, historique d'investigations, décisions architecturales |
-| **BETA_NOTES.md** | Program bêta | Guidance (legacy, peu utilisé) |
+| **CONTRIBUTING.md** | Devs | Setup, checks, structure |
+| **RELEASE.md** | Mainteneur | Procédure de release, tests manuels, quoi faire si ça casse |
+| **data/SOURCES.md** | Mainteneur | Mettre à jour les données de jeu sans release, provenance |
 | **CLAUDE.md** | Devs/maintainers | Toi, maintenant (workflow, release, regles) |
 
 Si tu dois expliquer quelque chose :
@@ -327,9 +302,8 @@ Si tu dois expliquer quelque chose :
    `npm run test:visual` en plus si le push touche `RelicPanel.ts`/`src/styles/*` (voir plus haut).
    Si tu oublies, CI te le fera remarquer, mais c'est lent. Mieux d'avoir un feedback local immédiat.
 
-4. **Version bump = 3 fichiers en sync**
-   - Si tu changes `package.json` mais oublies `tauri.conf.json`, la release échoue
-   - Toujours checker les trois avant de taguer
+4. **Version bump = `npm run bump -- <version>`**
+   - Jamais à la main : 5 fichiers à garder synchronisés
 
 5. **Toujours être bref.** Réponses courtes, droit au but, pas de pavés inutiles. Économiser les tokens.
 
@@ -353,7 +327,7 @@ Si tu dois expliquer quelque chose :
 
 ### Black screen en jeu
 
-=> Voir **KNOWN_ISSUES.md §1** pour l'historique complet. TL;DR : c'est un bug de layering compositor Windows, difficile à reproduire et non encore fixé.
+=> **KNOWN_ISSUES.md §1**. Cause hors de l'app (compositeur WebView2/GPU). Depuis 2026-10-08, `render.rs` le détecte par capture d'écran réelle et cache/réaffiche la fenêtre (2 essais max) après le démarrage et chaque Ins. Dans les logs : `RECOVERED from black frame` ou `still BLANK/BLACK after recovery attempts`.
 
 ### Meta.json invalide
 
@@ -373,11 +347,11 @@ A: Branch depuis `main`, fix, commit, PR, merge, tag `v0.4.1` (ou le numéro que
 **Q: Comment tester un build avant de le releaseer?**
 A: Tag `-beta.1`, tester, puis si tout OK tag sans suffixe (`v0.4.1`). Les deux sont indépendants.
 
-**Q: La version dans package.json est 0.4.0 mais Cargo.toml dit 0.3.9, c'est quoi?**
-A: C'est un oubli ou un revert partagé. Sync les 3 fichiers avant de tagger. `grep "version" package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json` pour vérifier.
+**Q: Un patch PoE2 change un mod ou une plage de stat, je fais une release?**
+A: Non : éditer `data/game-data.json`, incrémenter `revision`, merger sur `main`. Les apps le récupèrent au démarrage. Voir `data/SOURCES.md`.
 
 **Q: Meta.json watch ne marche pas.**
-A: Vérifier que le fichier existe à `$APPCONFIG/meta.json`. En dev mode (`tauri dev`), c'est `$HOME/AppData/Roaming/poe2-waystone-analyzer/`. Le watch use la feature `notify-debouncer-full` (Rust), débounce 1s.
+A: Vérifier que le fichier existe à `%APPDATA%\me.dorian.waystone-overlay\meta.json` (`$APPCONFIG`). Le watch passe par `tauri-plugin-fs` (`watchMetaFile`, délai 1s).
 
 **Q: Je dois relancer l'app pour que mon changement de scoring prenne effet?**
 A: Oui, pour le code (TypeScript/Rust). Pour meta.json customizations, non — l'app recharge automatiquement sans restart.

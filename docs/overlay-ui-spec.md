@@ -356,7 +356,7 @@ on tier in JS except `FxLayer` (sparks gate on `god`).
 
 ## 13. Acceptance checklist
 
-Walked end-to-end 2026-07-04 (`docs/implementation-plan.md`'s M6 section) —
+Walked end-to-end 2026-07-04 (`docs/history/implementation-plan.md`'s M6 section) —
 all ten passed at the code/log level, three with an explicit caveat (items
 2/3/4 not visually re-confirmed that pass, item 9 inherits the still-open
 compositor flakiness, KNOWN_ISSUES #1). See that section for the per-item

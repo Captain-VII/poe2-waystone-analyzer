@@ -835,7 +835,7 @@ export function mountOverlay(
       .join("");
 
     // Key factors + insights share one row, folded together rather than a
-    // new titled section (see docs/implementation-plan.md). The danger
+    // new titled section (see docs/history/implementation-plan.md). The danger
     // list (severity-grouped, DangerList.ts) comes first and always shows
     // in full; factors/insights used to be capped at 1 combined row —
     // real content (keyFactors: ≤4, insights: ≤3) was silently discarded

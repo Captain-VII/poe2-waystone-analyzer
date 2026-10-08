@@ -1,101 +1,81 @@
-# Release Checklist — Waystone Overlay
+# Publier une version
 
-Simple checklist pour releaseer une nouvelle version. Suivi étape par étape, rien de plus.
+Rien n'atteint les joueurs tant qu'un tag `v*` n'est pas poussé. Les données
+de jeu (`data/game-data.json`) sont l'exception : elles partent dès qu'elles
+sont sur `main`, sans release (voir [data/SOURCES.md](data/SOURCES.md)).
 
----
-
-## Avant de commencer
-
-- [ ] Vous êtes sur `main` et tout est commité (`git status` propre)
-- [ ] Aucun incident critique en cours
-- [ ] Dernière version en prod fonctionne
-
-## Phase 1 : Tests
+## 1. Préparer
 
 ```bash
-npm test
-npm run verify-adapter
-npm run lint
-cargo test
-cargo clippy --all-targets
+git checkout main && git pull
+npm run bump -- 1.0.1            # ou 1.0.1-beta.1 pour une beta
 ```
 
-- [ ] npm test — PASS
-- [ ] npm run verify-adapter — PASS
-- [ ] npm run lint — PASS
-- [ ] cargo test — PASS (ou OK si macOS)
-- [ ] cargo clippy — PASS (ou OK si macOS)
-
-## Phase 2 : CHANGELOG
-
-- [ ] Section `## Unreleased` existe
-- [ ] Au moins une entrée (Added/Fixed/Changed)
-- [ ] Texte joueur-friendly, pas technique
-- [ ] Pas de typos
-
-## Phase 3 : Version (3 fichiers)
-
-Bump **exactement les mêmes versions** dans :
-- `package.json` (ligne ~4)
-- `src-tauri/Cargo.toml` (ligne ~20)
-- `src-tauri/tauri.conf.json` (ligne ~3)
-
-Vérifier : `grep "version" package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json`
-
-- [ ] Versions bumped
-- [ ] Versions match
-
-## Phase 4 : Commit & Push
+`npm run bump` met la version dans les 5 fichiers (package.json,
+package-lock.json, tauri.conf.json, Cargo.toml, Cargo.lock) et ouvre la
+section `## 1.0.1` dans CHANGELOG.md. Écrire dessous les notes **pour les
+joueurs, en anglais** (elles s'affichent dans l'app et sur la release).
 
 ```bash
-git add CHANGELOG.md package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
-git commit -m "Bump version to 0.5.1"
+git commit -am "Bump version to 1.0.1"
 git push origin main
 ```
 
-- [ ] Commité
-- [ ] Pushé
+## 2. Attendre la CI
 
-## Phase 5 : CI Check
+Le push sur `main` lance deux workflows :
+- **CI** : lint, tests, build, tests visuels, clippy. Doit être vert.
+- **Release cache** : précompile la release (~7 min). Taguer après sa fin
+  divise le temps de release par ~3 ; avant, ça marche quand même, juste
+  plus lentement.
 
-GitHub → Actions → vérifier que CI passe (tous les checks vert)
-
-- [ ] CI vert
-
-## Phase 6 : Tag & Push
+## 3. Taguer
 
 ```bash
-git tag v0.5.1
-git push origin v0.5.1
+git tag v1.0.1 && git push origin v1.0.1
 ```
 
-Ou beta : `git tag v0.5.1-beta.1`
+Le workflow Release :
+1. refuse un tag qui ne correspond pas à package.json / tauri.conf.json, ou
+   sans section CHANGELOG ;
+2. attend que la CI de ce commit soit verte (échoue sinon) ;
+3. construit et signe l'installeur NSIS, publie la release (pre-release si
+   le tag contient `-`) ;
+4. met à jour le flux de mise à jour : `updater-beta` à chaque tag,
+   `updater` (stable) seulement pour un tag sans suffixe.
 
-- [ ] Tag créé
-- [ ] Tag pushé
+## 4. Vérifier (avant une version stable)
 
-## Phase 7 : Vérifier Release
+Installer depuis la release (pas `tauri dev`) et vérifier :
 
-GitHub → Releases → vérifier que v0.5.1 existe avec MSI.
+- [ ] L'overlay apparaît en haut à droite, pas noir. Dans Export Logs :
+      `render-check: window renders fine`.
+- [ ] **Ins** sur un vrai Waystone en jeu affiche son score. Deux fois de
+      suite (le cas « marche une fois, pas deux »).
+- [ ] **Ins** sur un autre objet : « Not a Waystone », rien ne casse.
+- [ ] Clic dans le jeu : l'overlay se cache. Le bouton pin l'en empêche.
+- [ ] Réglages : chaque onglet s'ouvre ; aucune ligne `csp-violation` dans
+      les logs.
+- [ ] Mise à jour : une installation de la version précédente propose
+      celle-ci (canal beta pour une beta).
 
-**C'est bon ! Release est live.**
-
----
-
-## Versioning
-
-- **PATCH** : bugfix (`0.5.0` → `0.5.1`)
-- **MINOR** : feature (`0.5.0` → `0.6.0`)
-- **MAJOR** : breaking change (`0.5.0` → `1.0.0`)
-
-Beta : `-beta.N` (ex: `0.5.1-beta.1`)
-
----
+Astuce si on scripte Ins : donner le focus au jeu ou au Bloc-notes avant, un
+terminal au premier plan reçoit le Ctrl+C simulé.
 
 ## Si ça casse
 
-- CI rouge : `git reset --hard HEAD~1 && git push origin main --force` → fixer → recommencer
-- Version pas sync : vérifier avec grep, corriger, recommitter
-- Tag mal : `git tag -d v0.5.1 && git push origin -d v0.5.1` → refaire
+- **CI rouge sur main** : corriger dans une PR et merger. Ne jamais réécrire
+  l'historique de `main`.
+- **Release ratée avant publication** : supprimer le tag, corriger, retaguer.
+  ```bash
+  git tag -d v1.0.1 && git push origin -d v1.0.1
+  ```
+- **Version publiée défectueuse** : publier un correctif avec une version
+  supérieure (`1.0.2`). Une version inférieure n'est jamais proposée en
+  mise à jour.
 
-Voilà. 🚀
+## Versions
+
+- PATCH `1.0.0 → 1.0.1` : correctif. MINOR `1.0.0 → 1.1.0` : fonctionnalité.
+- Beta : suffixe `-beta.N`, uniquement pour les joueurs ayant activé le
+  canal Beta.

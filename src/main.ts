@@ -373,7 +373,7 @@ async function analyze(simulateCopy = true): Promise<void> {
   }
   // Support/debugging checkpoint: confirms whether Ins actually applied a
   // real clipboard analysis vs. left the display unchanged (invalid/no
-  // Waystone on clipboard) — see docs/release-checklist.md §3.
+  // Waystone on clipboard) — see RELEASE.md §4.
   await logAnalyzeAttempt({ hadClipboardText: !!clip, applied, failure, clipLength: clip?.length ?? null });
   if (failure) {
     // Only on a real press — the startup-only analyze(false) keeps its
