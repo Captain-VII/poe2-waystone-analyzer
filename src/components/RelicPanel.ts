@@ -10,6 +10,7 @@ import {
   savePinned,
 } from "../settings";
 import { renderDangerList } from "./DangerList";
+import { esc } from "../html";
 import { openExternal } from "../opener";
 import {
   loadShowInsights,
@@ -272,10 +273,6 @@ const BONUS_ICON_SVG: Record<"stat" | "match" | "reward" | "bonus" | "danger" | 
 
 function cornerSvg(pos: "tl" | "tr" | "br" | "bl"): string {
   return `<svg class="corner ${pos}" viewBox="0 0 24 24" aria-hidden="true">${CORNER_PATHS}</svg>`;
-}
-
-function esc(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
 
 function fmtDelta(v: number): string {
@@ -1360,7 +1357,7 @@ export function mountOverlay(
     metaTabletsEl.innerHTML = model.tablets
       .map(
         (t, i) => `<div class="set-row">
-          <span class="set-lab set-lab-tablet">${t.name}${t.isCustom ? " (custom)" : ""}</span>
+          <span class="set-lab set-lab-tablet">${esc(t.name)}${t.isCustom ? " (custom)" : ""}</span>
           <label class="set-switch"><input type="checkbox" data-meta-tablet-idx="${i}"${t.enabled ? " checked" : ""} /><span class="set-switch-track"></span></label>
         </div>`,
       )

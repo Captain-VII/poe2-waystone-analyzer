@@ -7,6 +7,7 @@
  *  vocabulary and never feeds anything back into dangerLevel/score. */
 
 import type { DangerHitView } from "../types";
+import { esc } from "../html";
 
 type VisualTier = DangerHitView["severity"];
 
@@ -23,10 +24,6 @@ const TIER_META: Record<VisualTier, { heading: string; icon: string }> = {
 };
 
 const TIER_ORDER: VisualTier[] = ["high", "medium", "low"];
-
-function esc(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-}
 
 /** Stable grouping: hits arrive severity-sorted from the adapter, and
  *  filter preserves order, so within-group order is the analyzer's. */
