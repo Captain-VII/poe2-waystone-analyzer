@@ -7,6 +7,11 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 0.6.0-beta.4
+
+- **Security hardening:** the overlay now only runs its own code, and custom tablet names from your meta file are displayed as plain text.
+- **More reliable updates:** the update check now points directly at the app's current download location.
+
 ## 0.6.0-beta.3
 
 - **Under-the-hood update:** the app framework and its components were brought up to date, including the auto-updater and clipboard handling.
