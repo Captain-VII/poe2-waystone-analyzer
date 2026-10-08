@@ -129,7 +129,7 @@ export const DEFAULT_TABLETS: RawTabletDef[] = [
   // the much bigger boss-scoped suffix on the same stat, since duplicate
   // stat lines take the max, not a sum) at their shared-pool midpoints.
   {
-    name: "Overseer Precursor Tablet",
+    name: "Overseer Tablet",
     mods: [
       "12% increased Monster Effectiveness",
       "17% increased Monster Rarity",
@@ -316,6 +316,20 @@ function hydrate(raw: RawTabletDef): TabletDef {
     rewardScore: computeRewardScore(raw.rewards),
     confidence: raw.confidence ?? "medium",
   };
+}
+
+/** Tablet names this app used to ship that the game has since renamed
+ *  (lowercased old name -> current name). Applied to meta.json and pinned
+ *  tablets on load, so a player's customizations follow the rename instead
+ *  of silently turning into an orphaned "custom" tablet. "Overseer
+ *  Precursor Tablet" is "Overseer Tablet" in the game's own base-item data
+ *  (re-checked 2026-10-08 against repoe-fork.github.io/poe2/base_items.json). */
+const LEGACY_TABLET_NAMES: Record<string, string> = {
+  "overseer precursor tablet": "Overseer Tablet",
+};
+
+export function canonicalTabletName(name: string): string {
+  return LEGACY_TABLET_NAMES[name.toLowerCase()] ?? name;
 }
 
 let active: TabletDef[] = DEFAULT_TABLETS.map(hydrate);

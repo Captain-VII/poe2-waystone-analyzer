@@ -806,7 +806,7 @@
 }
 .set-dropdown-item.selected { color: var(--gold-hi); }
 
-/* Tablet toggle labels can be long ("Overseer Precursor Tablet") — let them
+/* Tablet toggle labels can be long ("Expedition Tablet (custom)") — let them
    ellipsize instead of pushing the switch out of the row. */
 .set-lab-tablet {
   overflow: hidden;

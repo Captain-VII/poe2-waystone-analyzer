@@ -12,7 +12,7 @@
  *  tablets, unknown keys) is carried through byte-for-byte. */
 
 import { MECHANICS, type MechanicDef, type StatKey } from "./mechanics";
-import { DEFAULT_TABLETS, type RawTabletDef } from "./tablets";
+import { DEFAULT_TABLETS, canonicalTabletName, type RawTabletDef } from "./tablets";
 import type { Reward } from "./rewards";
 
 // Re-exported so verify-adapter.mjs's meta-schema bundle can assert against
@@ -77,10 +77,33 @@ export function parseMetaFile(text: string): RawMetaFile | null {
   try {
     const parsed: unknown = JSON.parse(text);
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-    return parsed as RawMetaFile;
+    return migrateTabletNames(parsed as RawMetaFile);
   } catch {
     return null;
   }
+}
+
+/** Rewrites renamed tablets (`canonicalTabletName`) in a parsed file, in
+ *  place: each tablets[].name and every mechanic's recommended_tablets. */
+function migrateTabletNames(file: RawMetaFile): RawMetaFile {
+  if (Array.isArray(file.tablets)) {
+    for (const entry of file.tablets) {
+      if (typeof entry === "object" && entry !== null && typeof (entry as { name?: unknown }).name === "string") {
+        const t = entry as { name: string };
+        t.name = canonicalTabletName(t.name);
+      }
+    }
+  }
+  if (typeof file.metas === "object" && file.metas !== null) {
+    for (const meta of Object.values(file.metas)) {
+      if (meta && Array.isArray(meta.recommended_tablets)) {
+        meta.recommended_tablets = meta.recommended_tablets.map((t) =>
+          typeof t === "string" ? canonicalTabletName(t) : t,
+        );
+      }
+    }
+  }
+  return file;
 }
 
 /** Same parse as `parseMetaFile`, but for the "Validate meta.json" button:

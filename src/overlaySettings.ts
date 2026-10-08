@@ -3,6 +3,8 @@
  *  main.ts's existing toggleMode — the Settings panel just calls that, it
  *  doesn't duplicate the storage. */
 
+import { canonicalTabletName } from "./analyzer/tablets";
+
 const KEYS = {
   showInsights: "overlay.showInsights",
   opacity: "overlay.opacity",
@@ -90,7 +92,9 @@ export function loadPinnedTablets(): string[] {
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((v): v is string => typeof v === "string").map(canonicalTabletName)
+      : [];
   } catch {
     return [];
   }

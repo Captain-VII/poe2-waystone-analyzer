@@ -45,7 +45,7 @@ export const PATTERNS: Record<keyof ModStats, RegExp> = {
   monsterEffectiveness:
     /(?:(\d+)\s*%[^%\n]{0,25}?monster\s+effectiveness|monster\s+effectiveness[^%\d\n]{0,25}?(\d+)\s*%)/i,
   // "chance to find an additional Waystone" (drop-first) and "chance to
-  // drop a Waystone" (the real Overseer Precursor Tablet's phrasing,
+  // drop a Waystone" (the real Overseer Tablet's phrasing,
   // find-vs-drop reversed) both mean the same thing — tolerate either verb.
   waystoneDropChance:
     /(?:(\d+)\s*%[^%\n]{0,30}?(?:waystones?\s+(?:found|drop)|chance\s+to\s+(?:find|drop)\s+an?\s+(?:additional\s+)?waystones?)|(?:waystones?\s+(?:found|drop))[^%\d\n]{0,30}?(\d+)\s*%)/i,
