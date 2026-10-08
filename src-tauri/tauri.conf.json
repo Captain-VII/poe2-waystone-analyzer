@@ -3,7 +3,7 @@
   "productName": "Waystone-Analyzer",
   "mainBinaryName": "Waystone-Analyzer",
   "version": "0.7.0-beta.1",
-  "identifier": "me.dorian.waystone-overlay",
+  "identifier": "com.captain-vii.waystone-analyzer",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
@@ -59,7 +59,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "Dorian Dubosc",
+    "publisher": "Captain-VII",
     "shortDescription": "PoE2 Waystone analysis overlay",
     "longDescription": "An in-game overlay that reads a copied Path of Exile 2 Waystone and shows its heat score, tier verdict, and recommended tablets in a dark-fantasy relic-styled Compact/Full panel.",
     "windows": {

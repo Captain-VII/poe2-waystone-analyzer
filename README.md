@@ -121,7 +121,7 @@ the same editor for that mechanic. Changes apply immediately; **Reset**
 returns to defaults.
 
 Everything is saved in `meta.json`
-(`%APPDATA%\me.dorian.waystone-overlay\meta.json`), which you can also edit
+(`%APPDATA%\com.captain-vii.waystone-analyzer\meta.json`), which you can also edit
 by hand; the app reloads it on save. **Validate meta.json** points to the
 exact line of a JSON mistake. Hand-editing is how you add a custom tablet:
 
@@ -172,8 +172,8 @@ when you press it wasn't one. The previous result stays on screen.
 
 **Uninstall.** Windows Settings → Apps → **Waystone-Analyzer**. Your
 settings are kept for a reinstall; to remove everything, also delete
-`%APPDATA%\me.dorian.waystone-overlay` and
-`%LOCALAPPDATA%\me.dorian.waystone-overlay`.
+`%APPDATA%\com.captain-vii.waystone-analyzer` and
+`%LOCALAPPDATA%\com.captain-vii.waystone-analyzer`.
 
 ## Reporting a problem
 
