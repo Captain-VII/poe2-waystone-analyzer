@@ -351,7 +351,7 @@ A: Tag `-beta.1`, tester, puis si tout OK tag sans suffixe (`v0.4.1`). Les deux 
 A: Non : éditer `data/game-data.json`, incrémenter `revision`, merger sur `main`. Les apps le récupèrent au démarrage. Voir `data/SOURCES.md`.
 
 **Q: Meta.json watch ne marche pas.**
-A: Vérifier que le fichier existe à `%APPDATA%\me.dorian.waystone-overlay\meta.json` (`$APPCONFIG`). Le watch passe par `tauri-plugin-fs` (`watchMetaFile`, délai 1s).
+A: Vérifier que le fichier existe à `%APPDATA%\com.captain-vii.waystone-analyzer\meta.json` (`$APPCONFIG`). Le watch passe par `tauri-plugin-fs` (`watchMetaFile`, délai 1s).
 
 **Q: Je dois relancer l'app pour que mon changement de scoring prenne effet?**
 A: Oui, pour le code (TypeScript/Rust). Pour meta.json customizations, non — l'app recharge automatiquement sans restart.

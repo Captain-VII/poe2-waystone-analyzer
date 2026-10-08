@@ -16,12 +16,14 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 mod hotkeys;
 mod input;
 mod logging;
+mod migration;
 mod render;
 mod updater;
 
 use hotkeys::*;
 use input::*;
 use logging::*;
+use migration::*;
 use render::*;
 use updater::*;
 
@@ -251,8 +253,18 @@ pub fn run() {
             is_debug_overlay
         ])
         .setup(|app| {
+            // Before anything creates the new identifier's folders (logs,
+            // meta.json, the WebView2 profile): see migration.rs.
+            let migrations = migrate_legacy_dirs(app.handle());
             app.manage(LogGuard::new(Some(init_logging(app.handle()))));
             install_panic_hook();
+            for (dir, outcome) in &migrations {
+                match outcome {
+                    Migration::NothingToMove => {}
+                    Migration::Moved => tracing::info!(target: "migration", dir, "moved legacy data folder"),
+                    other => tracing::warn!(target: "migration", dir, outcome = ?other, "legacy data folder not moved"),
+                }
+            }
             seed_meta_json(app.handle());
             let hotkey_base = load_hotkey_base(app.handle());
             app.manage(HotkeyBase(Mutex::new(hotkey_base.clone())));
