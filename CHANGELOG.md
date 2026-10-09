@@ -7,6 +7,10 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 1.0.0-rc.2
+
+- **Cleaner update from older versions:** a leftover registry entry from versions before the app was renamed is now removed during installation.
+
 ## 1.0.0-rc.1
 
 - **Release candidate for 1.0.** No new features: this build is the one being checked in real play before the stable release. If anything looks wrong, Settings → App → Export Logs and share the latest file.
