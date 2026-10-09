@@ -32,18 +32,22 @@ directement de 0.5.0 à 1.0, à travers le changement d'identité de
 0.7.0-beta.2. Les étapes 1, 3 et 4 se font sur Windows (rendu, NSIS,
 updater).
 
-1. [ ] **Valider la mise à jour 0.5.0 → 1.0** (plus gros risque). Installer
+1. [x] **Valider la mise à jour 0.5.0 → 1.0** (plus gros risque). Fait le
+       2026-10-09 avec la vraie 0.5.0 et la 1.0.0-rc.1 (installeur lancé
+       comme l'updater : `/P /UPDATE`). Installer
        0.5.0, créer réglages, historique, pins, hotkey modifié et meta.json,
        puis mettre à jour vers la dernière beta :
-       - [ ] `migration.rs` a tout déplacé (rien de perdu, ancien dossier
+       - [x] `migration.rs` a tout déplacé (rien de perdu, ancien dossier
              vide ou absent) ;
-       - [ ] une seule entrée « Waystone-Analyzer » dans Windows →
+       - [x] une seule entrée « Waystone-Analyzer » dans Windows →
              Applications (le publisher a changé, à vérifier : risque de
              double installation) ;
-       - [ ] le démarrage automatique lance le nouvel exe ;
-       - [ ] plus de `HKCU\Software\Dorian Dubosc` dans regedit (supprimée
-             par `src-tauri/windows/hooks.nsh`) ;
-       - [ ] installeur lancé à la main sur une 0.5.0, option par défaut
+       - [x] le démarrage automatique lance le nouvel exe (même chemin) ;
+       - [x] plus de `HKCU\Software\Dorian Dubosc` dans regedit (supprimée
+             par `src-tauri/windows/hooks.nsh`, y compris la sous-clé
+             `waystone-overlay` d'avant le renommage, corrigé en #21) ;
+       - [~] installeur lancé à la main sur une 0.5.0 : en silencieux (`/S`)
+             ça passe sans erreur ; le cas interactif reste à cliquer, option par défaut
              « désinstaller avant » : erreur « impossible de désinstaller »
              attendue (l'ancien chemin est sous l'ancienne clé publisher),
              « ne pas désinstaller » doit passer. L'auto-update (`/UPDATE`)
