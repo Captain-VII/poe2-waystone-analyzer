@@ -12,13 +12,18 @@ export interface ChangelogSection {
 }
 
 /** Parses `## X.Y.Z` sections with `- bullet` lines, newest first (file
- *  order). The intro text before the first section is dropped. */
+ *  order). The intro text before the first section is dropped, and so is
+ *  `## Unreleased`: it's the maintainer's staging area, not shipped notes. */
 export function parseChangelog(raw: string = changelogRaw): ChangelogSection[] {
   const sections: ChangelogSection[] = [];
   let current: ChangelogSection | null = null;
   for (const line of raw.split(/\r?\n/)) {
     const heading = line.match(/^##\s+(.+?)\s*$/);
     if (heading) {
+      if (heading[1]!.toLowerCase() === "unreleased") {
+        current = null;
+        continue;
+      }
       current = { version: heading[1]!, bullets: [] };
       sections.push(current);
       continue;
