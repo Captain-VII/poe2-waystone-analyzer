@@ -58,7 +58,24 @@ updater).
 4. [ ] **1.0.0 stable** :
        - [ ] section CHANGELOG `1.0.0` qui résume tout depuis 0.5.0 (les
              joueurs stables n'ont vu aucune note 0.6/0.7, et c'est ce texte
-             qu'affiche « What's new ») ;
+             qu'affiche « What's new »). Brouillon, à copier sous
+             `## 1.0.0` après `npm run bump -- 1.0.0` et à compléter avec
+             les correctifs des RC :
+
+             ```
+             - **Black or invisible overlay now fixes itself.** The overlay checks what is really on screen after it appears, and redraws itself if the window came up black.
+             - **Game data updates without an app update.** Mod wording, stat ranges and tablets are refreshed at launch, so a game patch can be handled right away. Offline, the overlay keeps using what it already has.
+             - **New app identity.** The overlay is now published as Captain-VII. Your settings, history, pinned tablets, hotkey and meta.json move over automatically on first launch.
+             - **New: an "Export Logs" button in Settings → App** opens the folder with diagnostic logs, to share when something goes wrong. Logs never store clipboard text, only its length.
+             - **Toggling the Beta channel now checks for an update right away**, in both directions.
+             - **"Overseer Precursor Tablet" is now "Overseer Tablet"**, matching the game. Your tablet settings and pins carry over.
+             - **Fixed: the overlay could get stuck off-screen** after disconnecting the monitor it was on. It now re-anchors onto a remaining monitor.
+             - **Fixed: a waystone's "increased Quantity of Waystones found" mod inflated its Expedition score** by also counting as Item Quantity.
+             - **Fixed: the Heat Breakdown column didn't respond to hovering or clicking.**
+             - **Easier to read:** the remaining spots still using the old, harder-to-read red now use the brighter danger color.
+             - **Security and reliability:** the overlay only runs its own code, custom tablet names are shown as plain text, and the app framework and auto-updater are up to date.
+             ```
+             ;
        - [ ] KNOWN_ISSUES #1 et #6 mis à jour selon les logs de l'étape 3 ;
        - [ ] tag `v1.0.0`, checklist §4 de [RELEASE.md](RELEASE.md), et
              vérifier qu'une install 0.5.0 se voit proposer la 1.0.
