@@ -23,10 +23,39 @@ Livré pour la 1.0 :
 - Maintenance minimale : Rust figé, Dependabot sécurité seulement, CI
   hebdomadaire, `npm run bump`, cache de release.
 
-Reste avant la 1.0 stable, côté joueur : test multi-écrans réel (ci-dessous)
-et une à deux semaines de jeu sur la release candidate.
-
 Hors 1.0 : tout ce qui est sous « Idées ».
+
+### Plan jusqu'à la 1.0.0 stable (2026-10-09)
+
+Le stable est encore en 0.5.0 : tous les joueurs stables sauteront
+directement de 0.5.0 à 1.0, à travers le changement d'identité de
+0.7.0-beta.2. Les étapes 1, 3 et 4 se font sur Windows (rendu, NSIS,
+updater).
+
+1. [ ] **Valider la mise à jour 0.5.0 → 1.0** (plus gros risque). Installer
+       0.5.0, créer réglages, historique, pins, hotkey modifié et meta.json,
+       puis mettre à jour vers la dernière beta :
+       - [ ] `migration.rs` a tout déplacé (rien de perdu, ancien dossier
+             vide ou absent) ;
+       - [ ] une seule entrée « Waystone-Analyzer » dans Windows →
+             Applications (le publisher a changé, à vérifier : risque de
+             double installation) ;
+       - [ ] le démarrage automatique lance le nouvel exe.
+2. [ ] **Gel des fonctionnalités** : correctifs uniquement jusqu'à la 1.0.
+3. [ ] **Release candidate** : `npm run bump -- 1.0.0-rc.1`, tag (canal
+       beta), 1 à 2 semaines de jeu. À récupérer dans Export Logs :
+       - [ ] écran noir (KNOWN_ISSUES #1) : `render-check: window renders
+             fine`, idéalement un `RECOVERED from black frame` ;
+       - [ ] les 3 scénarios multi-écrans de « Ensuite » (KNOWN_ISSUES #6).
+       Chaque bug trouvé : correctif, puis `rc.N+1`.
+4. [ ] **1.0.0 stable** :
+       - [ ] section CHANGELOG `1.0.0` qui résume tout depuis 0.5.0 (les
+             joueurs stables n'ont vu aucune note 0.6/0.7, et c'est ce texte
+             qu'affiche « What's new ») ;
+       - [ ] KNOWN_ISSUES #1 et #6 mis à jour selon les logs de l'étape 3 ;
+       - [ ] tag `v1.0.0`, checklist §4 de [RELEASE.md](RELEASE.md), et
+             vérifier qu'une install 0.5.0 se voit proposer la 1.0.
+5. Après la 1.0 : reprendre « Idées » en 1.1, 1.2, etc.
 
 ## Priorités
 
