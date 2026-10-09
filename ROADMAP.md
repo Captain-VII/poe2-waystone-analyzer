@@ -53,8 +53,9 @@ updater).
              « ne pas désinstaller » doit passer. L'auto-update (`/UPDATE`)
              ne désinstalle jamais, il n'est pas concerné.
 2. [ ] **Gel des fonctionnalités** : correctifs uniquement jusqu'à la 1.0.
-3. [ ] **Release candidate** : `npm run bump -- 1.0.0-rc.1`, tag (canal
-       beta), 1 à 2 semaines de jeu. À récupérer dans Export Logs :
+3. [~] **Release candidate** : rc.1 (2026-10-09) puis rc.2 (correctif
+       #21) publiées sur le canal beta. Reste : 1 à 2 semaines de jeu. À
+       récupérer dans Export Logs :
        - [ ] écran noir (KNOWN_ISSUES #1) : `render-check: window renders
              fine`, idéalement un `RECOVERED from black frame` ;
        - [ ] les 3 scénarios multi-écrans de « Ensuite » (KNOWN_ISSUES #6).
@@ -151,18 +152,12 @@ Vrac à trier.
       "Meta" volontairement absent de la suite : il n'existe qu'en vrai
       Tauri (accès au système de fichiers pour meta.json), jamais en
       plain-browser dev.
-- [ ] Bug écran noir (KNOWN_ISSUES #1) — la capture OS réelle existe
-      maintenant (`capture_window_is_blank`, 2026-07-25) et journalise un
-      vrai verdict après chaque démarrage, mais **rien ne réagit encore à
-      ce verdict**. Pistes encore non tentées :
-      - câbler une action corrective quand le verdict est « noir » (nouveau
-        nudge, cycle hide/show) — avec précaution : une escalade non testée
-        a déjà aggravé les choses une fois (essai #12) ;
-      - lancer plusieurs sessions réelles pour voir si le check attrape
-        enfin une occurrence noire (pas encore le cas au 2026-07-25) ;
-      - exposer un réglage de backend graphique
-        (`--angle-graphics-backend=d3d11` au lieu du d3d12 par défaut)
-        pour que l'utilisateur teste selon son pilote.
+- [x] Bug écran noir (KNOWN_ISSUES #1) — action corrective câblée le
+      2026-10-08 (#8) : verdict « noir » confirmé par une 2e capture, puis
+      cycle hide/show (2 max), au démarrage et après chaque Ins. Reste à
+      voir un `RECOVERED from black frame` en jeu (étape 3). Piste restante
+      si ça ne suffit pas : exposer un réglage de backend graphique
+      (`--angle-graphics-backend=d3d11` au lieu du d3d12 par défaut).
 - [x] **Canal beta opt-in** — livré 2026-07-26. A révélé un vrai bug latent :
       il n'existait qu'un seul flux rolling (`updater`), rafraîchi sur
       **chaque** tag — un tag beta aurait donc mis à jour tous les
