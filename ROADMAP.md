@@ -40,7 +40,14 @@ updater).
        - [ ] une seule entrée « Waystone-Analyzer » dans Windows →
              Applications (le publisher a changé, à vérifier : risque de
              double installation) ;
-       - [ ] le démarrage automatique lance le nouvel exe.
+       - [ ] le démarrage automatique lance le nouvel exe ;
+       - [ ] plus de `HKCU\Software\Dorian Dubosc` dans regedit (supprimée
+             par `src-tauri/windows/hooks.nsh`) ;
+       - [ ] installeur lancé à la main sur une 0.5.0, option par défaut
+             « désinstaller avant » : erreur « impossible de désinstaller »
+             attendue (l'ancien chemin est sous l'ancienne clé publisher),
+             « ne pas désinstaller » doit passer. L'auto-update (`/UPDATE`)
+             ne désinstalle jamais, il n'est pas concerné.
 2. [ ] **Gel des fonctionnalités** : correctifs uniquement jusqu'à la 1.0.
 3. [ ] **Release candidate** : `npm run bump -- 1.0.0-rc.1`, tag (canal
        beta), 1 à 2 semaines de jeu. À récupérer dans Export Logs :

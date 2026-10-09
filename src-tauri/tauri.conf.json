@@ -64,7 +64,8 @@
     "longDescription": "An in-game overlay that reads a copied Path of Exile 2 Waystone and shows its heat score, tier verdict, and recommended tablets in a dark-fantasy relic-styled Compact/Full panel.",
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerHooks": "./windows/hooks.nsh"
       }
     }
   }
