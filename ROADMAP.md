@@ -52,16 +52,16 @@ updater).
              attendue (l'ancien chemin est sous l'ancienne clé publisher),
              « ne pas désinstaller » doit passer. L'auto-update (`/UPDATE`)
              ne désinstalle jamais, il n'est pas concerné.
-2. [ ] **Gel des fonctionnalités** : correctifs uniquement jusqu'à la 1.0.
-3. [~] **Release candidate** : rc.1 (2026-10-09) puis rc.2 (correctif
-       #21) publiées sur le canal beta. Reste : 1 à 2 semaines de jeu. À
-       récupérer dans Export Logs :
+2. [x] **Gel des fonctionnalités** : correctifs uniquement jusqu'à la 1.0.
+3. [x] **Release candidate** : rc.1 (2026-10-09) puis rc.2 (correctif
+       #21) publiées sur le canal beta. Clôturée le 2026-10-18 sans les
+       logs ci-dessous (acceptés comme risque, à récupérer après la 1.0) :
        - [ ] écran noir (KNOWN_ISSUES #1) : `render-check: window renders
              fine`, idéalement un `RECOVERED from black frame` ;
        - [ ] les 3 scénarios multi-écrans de « Ensuite » (KNOWN_ISSUES #6).
        Chaque bug trouvé : correctif, puis `rc.N+1`.
-4. [ ] **1.0.0 stable** :
-       - [ ] section CHANGELOG `1.0.0` qui résume tout depuis 0.5.0 (les
+4. [~] **1.0.0 stable** (tag poussé le 2026-10-18) :
+       - [x] section CHANGELOG `1.0.0` qui résume tout depuis 0.5.0 (les
              joueurs stables n'ont vu aucune note 0.6/0.7, et c'est ce texte
              qu'affiche « What's new »). Brouillon, à copier sous
              `## 1.0.0` après `npm run bump -- 1.0.0` et à compléter avec
