@@ -7,6 +7,21 @@ sert de description à la release GitHub — écrire pour les joueurs.
 
 ## Unreleased
 
+## 1.0.0
+
+- **Version 1.0.** Everything below is new since 0.5.0.
+- **Black or invisible overlay now fixes itself.** The overlay checks what is really on screen after it appears, and redraws itself if the window came up black.
+- **Game data updates without an app update.** Mod wording, stat ranges and tablets are refreshed at launch, so a game patch can be handled right away. Offline, the overlay keeps using what it already has.
+- **New app identity.** The overlay is now published as Captain-VII. Your settings, history, pinned tablets, hotkey and meta.json move over automatically on first launch, and leftover registry entries from the old name are cleaned up during installation.
+- **New: an "Export Logs" button in Settings → App** opens the folder with diagnostic logs, to share when something goes wrong. Logs never store clipboard text, only its length.
+- **Toggling the Beta channel now checks for an update right away**, in both directions.
+- **"Overseer Precursor Tablet" is now "Overseer Tablet"**, matching the game. Your tablet settings and pins carry over.
+- **Fixed: the overlay could get stuck off-screen** after disconnecting the monitor it was on. It now re-anchors onto a remaining monitor.
+- **Fixed: a waystone's "increased Quantity of Waystones found" mod inflated its Expedition score** by also counting as Item Quantity.
+- **Fixed: the Heat Breakdown column didn't respond to hovering or clicking.**
+- **Easier to read:** the remaining spots still using the old, harder-to-read red now use the brighter danger color.
+- **Security and reliability:** the overlay only runs its own code, custom tablet names are shown as plain text, and the app framework and auto-updater are up to date.
+
 ## 1.0.0-rc.2
 
 - **Cleaner update from older versions:** a leftover registry entry from versions before the app was renamed is now removed during installation.
